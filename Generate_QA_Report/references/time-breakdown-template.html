@@ -1,0 +1,649 @@
+<!--
+  CONSTANT BASE TEMPLATE for NDC_Integration/Artifacts/Logs/<slug>_TimeBreakdown.html - the companion page to <slug>.html. Built exactly ONCE per run, alongside the main HTML, and ONLY when the .jsonl has timing data (>=1 test_case with started_at). Computation rules: ../SKILL.md "Execution Time Breakdown page" and log-schema.md "Execution-time accounting rule".
+
+  CANONICAL SOURCE (fixed 2026-09-30): this file IS NDC_Integration/Artifacts/Logs/20260930-140455_SeatMap-GulfAir-KSA-Round12_TimeBreakdown.html, copied verbatim, with only these "DATA:" annotation comments added. The sample values are Round 12's real numbers; replace values and repeat rows, never change the CSS, class names, ids, section order or the generic scripts. Layout: 1. Time Breakdown (always visible), Expand all / Collapse all, then collapsible 2. Execution Phases, 3. Claude / AI Operations, 4. Reporting Breakdown, 5. Test Case Time, 6. Timeline, 7. Other / Overhead.
+  Reference generator: ../scripts/render-tb.js (reads the .jsonl, fills this template).
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NDC Integration - Execution Time Breakdown</title>
+<style>
+  :root{
+    color-scheme: light;
+    --paper:#F3F5F8; --surface:#FFFFFF; --surface-2:#EAEEF4;
+    --ink:#10151F; --ink-2:#45536B; --ink-muted:#7C8AA0;
+    --line:#DDE3EC; --line-strong:#C6CEDC;
+    --accent:#2A78D6; --accent-ink:#1C5CAB; --accent-wash:#E4EEFA;
+    --good:#0CA30C; --warning:#C98A17; --serious:#D9673C; --critical:#D03B3B;
+    --good-wash:rgba(12,163,12,0.12); --warning-wash:rgba(250,178,25,0.16);
+    --serious-wash:rgba(236,131,90,0.14); --critical-wash:rgba(208,59,59,0.12);
+    --shadow:rgba(16,21,31,0.08);
+    --time-exec:#2A78D6; --time-wait:#C98A17; --time-claude:#7C5CE0; --time-report:#0C9488; --time-overhead:#7C8AA0;
+    --font-sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    --font-mono:ui-monospace,"SF Mono","Cascadia Code","Roboto Mono",Consolas,"Courier New",monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:where(:not([data-theme="light"])){
+      color-scheme: dark;
+      --paper:#0A0E15; --surface:#111826; --surface-2:#16202F;
+      --ink:#EDF1F7; --ink-2:#B7C2D1; --ink-muted:#8290A6;
+      --line:#232E40; --line-strong:#324058;
+      --accent:#3987E5; --accent-ink:#8FBBEF; --accent-wash:#152A45;
+      --good:#35C24A; --warning:#E3A730; --serious:#E88A5E; --critical:#EA5B5B;
+      --good-wash:rgba(53,194,74,0.16); --warning-wash:rgba(227,167,48,0.16);
+      --serious-wash:rgba(232,138,94,0.16); --critical-wash:rgba(234,91,91,0.18);
+      --shadow:rgba(0,0,0,0.5);
+      --time-exec:#3987E5; --time-wait:#E3A730; --time-claude:#9B85F0; --time-report:#2FD1C0; --time-overhead:#8290A6;
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme: dark;
+    --paper:#0A0E15; --surface:#111826; --surface-2:#16202F;
+    --ink:#EDF1F7; --ink-2:#B7C2D1; --ink-muted:#8290A6;
+    --line:#232E40; --line-strong:#324058;
+    --accent:#3987E5; --accent-ink:#8FBBEF; --accent-wash:#152A45;
+    --good:#35C24A; --warning:#E3A730; --serious:#E88A5E; --critical:#EA5B5B;
+    --good-wash:rgba(53,194,74,0.16); --warning-wash:rgba(227,167,48,0.16);
+    --serious-wash:rgba(232,138,94,0.16); --critical-wash:rgba(234,91,91,0.18);
+    --shadow:rgba(0,0,0,0.5);
+    --time-exec:#3987E5; --time-wait:#E3A730; --time-claude:#9B85F0; --time-report:#2FD1C0; --time-overhead:#8290A6;
+  }
+  :root[data-theme="light"]{
+    color-scheme: light;
+    --paper:#F3F5F8; --surface:#FFFFFF; --surface-2:#EAEEF4;
+    --ink:#10151F; --ink-2:#45536B; --ink-muted:#7C8AA0;
+    --line:#DDE3EC; --line-strong:#C6CEDC;
+    --accent:#2A78D6; --accent-ink:#1C5CAB; --accent-wash:#E4EEFA;
+    --good:#0CA30C; --warning:#C98A17; --serious:#D9673C; --critical:#D03B3B;
+    --good-wash:rgba(12,163,12,0.12); --warning-wash:rgba(250,178,25,0.16);
+    --serious-wash:rgba(236,131,90,0.14); --critical-wash:rgba(208,59,59,0.12);
+    --shadow:rgba(16,21,31,0.08);
+    --time-exec:#2A78D6; --time-wait:#C98A17; --time-claude:#7C5CE0; --time-report:#0C9488; --time-overhead:#7C8AA0;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{ background:var(--paper); color:var(--ink); font-family:var(--font-sans);
+        font-size:14px; line-height:1.5; -webkit-font-smoothing:antialiased; }
+  @media (prefers-reduced-motion: reduce){ *{ animation-duration:.001ms !important; transition-duration:.001ms !important; } }
+  a{ color:var(--accent-ink); }
+  .wrap{ max-width:1040px; margin:0 auto; padding:32px 20px 80px; }
+  .dashboard-card{ background:var(--surface); border:1px solid var(--line-strong); border-radius:24px; padding:24px; }
+  code,.mono{ font-family:var(--font-mono); font-size:.92em; }
+  .tb-back{ font-size:13px; color:var(--ink-muted); text-decoration:none; }
+  .tb-back:hover{ text-decoration:underline; }
+  .header{ margin-bottom:20px; }
+  .header h1{ font-size:30px; font-weight:800; margin:10px 0 8px; }
+  .meta-card{ margin-top:8px; }
+  .fields{ display:flex; flex-direction:column; gap:4px; margin:4px 0 6px; }
+  .field-row{ display:flex; flex-wrap:wrap; gap:4px 28px; }
+  .field{ font-size:14px; display:flex; gap:6px; }
+  .field .k{ color:var(--ink-2); font-weight:700; font-size:15px; letter-spacing:normal; text-transform:none; flex-shrink:0; }
+  .field .k::after{ content:':'; }
+  .field .v{ color:var(--ink); }
+  h2.section-num{ font-size:15px; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-2);
+      border-bottom:1px solid var(--line); padding-bottom:6px; margin:32px 0 14px; }
+  .empty{ color:var(--ink-muted); font-size:13px; font-style:italic; }
+
+  .tb-cat-cards{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:22px; }
+  .tb-cat-card{ text-align:center; }
+  .tb-cat-card .val{ font-size:22px; font-weight:700; color:var(--ink); }
+  .tb-cat-card .pct{ font-size:13px; font-weight:600; margin-top:2px; }
+  .tb-cat-card .lbl{ font-size:12px; color:var(--ink-muted); margin-top:4px; }
+  .tb-cat-card .swatch{ display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:6px; vertical-align:middle; }
+  .tb-cat-card.exec .pct{ color:var(--time-exec); }
+  .tb-cat-card.wait .pct{ color:var(--time-wait); }
+  .tb-cat-card.claude .pct{ color:var(--time-claude); }
+  .tb-cat-card.report .pct{ color:var(--time-report); }
+  .tb-cat-card.overhead .pct{ color:var(--time-overhead); }
+
+  .tb-bars{ display:flex; flex-direction:column; gap:10px; margin:18px 0 20px; }
+  .tb-bar-row{ display:flex; align-items:center; gap:14px; }
+  .tb-bar-label{ width:180px; flex-shrink:0; font-size:13px; font-weight:600; color:var(--ink-2); display:flex; align-items:center; gap:8px; }
+  .tb-bar-track{ flex:1 1 auto; background:var(--surface-2); border-radius:7px; height:16px; overflow:hidden; }
+  .tb-bar-fill{ height:100%; border-radius:7px; }
+  .tb-bar-value{ width:170px; flex-shrink:0; text-align:right; font-size:12.5px; color:var(--ink-2); font-family:var(--font-mono); }
+
+  .tb-reconcile{ font-size:13px; color:var(--ink-2); margin-top:14px; padding-top:14px; border-top:1px solid var(--line); }
+  .tb-reconcile b{ color:var(--ink); }
+  .tb-warning{ background:var(--warning-wash); border:1px solid var(--warning); border-radius:12px; padding:12px 14px; margin-top:12px; font-size:13px; color:var(--ink); }
+  .tb-warning .w-title{ font-weight:700; color:var(--warning); margin-bottom:4px; }
+
+  table.tb-table{ width:100%; border-collapse:collapse; font-size:13px; }
+  table.tb-table th{ text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-muted); font-weight:700; padding:8px 10px; border-bottom:1px solid var(--line-strong); white-space:nowrap; }
+  table.tb-table td{ padding:9px 10px; border-bottom:1px solid var(--line); color:var(--ink-2); vertical-align:top; overflow-wrap:anywhere; }
+  table.tb-table tr:last-child td{ border-bottom:none; }
+  table.tb-table td.num, table.tb-table th.num{ text-align:right; font-family:var(--font-mono); white-space:nowrap; }
+  .tb-table-wrap{ overflow-x:auto; }
+  table.tb-table tr.tb-sub td{ background:rgba(127,127,127,.06); font-size:12.5px; }
+  table.tb-table tr.tb-sub td:first-child{ padding-left:28px; }
+  .tb-sub-arrow{ color:var(--ink-muted); margin-right:8px; }
+  table.tb-table tfoot td{ border-top:1px solid var(--line-strong); padding-top:12px; }
+  .tb-foot-note{ font-weight:400; color:var(--ink-muted); font-size:12px; }
+
+  .tc-toolbar{ display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:0 0 14px; position:sticky; top:0; z-index:5; background:var(--paper); padding:6px 0; }
+  .tc-toolbar input[type="search"]{ flex:1 1 220px; min-width:160px; padding:7px 10px; border-radius:7px; border:1px solid var(--line-strong); background:var(--surface); color:var(--ink); font-size:13px; }
+  .tc-toolbar select{ padding:7px 10px; border-radius:7px; border:1px solid var(--line-strong); background:var(--surface); color:var(--ink); font-size:13px; }
+  .tc-toolbar button{ padding:7px 12px; border-radius:7px; border:1px solid var(--line-strong); background:var(--surface); color:var(--ink-2); font-size:12px; font-weight:600; cursor:pointer; }
+  .tc-toolbar button:hover{ background:var(--surface-2); }
+  #tcbReset{ color:var(--critical); border-color:var(--critical); }
+  #tcbReset:hover{ background:var(--critical-wash); }
+  .tc-toolbar .tc-count{ font-size:12px; color:var(--ink-muted); margin-left:auto; white-space:nowrap; }
+  .tb-no-results{ padding:24px 16px; text-align:center; color:var(--critical); font-size:15px; font-weight:700; background:var(--critical-wash); border:1px solid var(--critical); border-radius:12px; margin-top:8px; }
+  .tb-no-results.js-hidden{ display:none; }
+
+  table.tcb-table{ width:100%; border-collapse:collapse; font-size:12.5px; }
+  table.tcb-table th{ text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.03em; color:var(--ink-muted); font-weight:700; padding:8px 9px; border-bottom:1px solid var(--line-strong); white-space:nowrap; cursor:pointer; user-select:none; }
+  table.tcb-table th:hover{ color:var(--ink); }
+  table.tcb-table th .sort-arrow{ font-size:9px; margin-left:3px; color:var(--accent-ink); }
+  table.tcb-table td{ padding:8px 9px; border-bottom:1px solid var(--line); color:var(--ink-2); vertical-align:top; overflow-wrap:anywhere; }
+  table.tcb-table td.num{ text-align:right; font-family:var(--font-mono); white-space:nowrap; }
+  table.tcb-table tr.js-hidden{ display:none; }
+  .badge{ font-size:11px; font-weight:700; padding:2px 8px; border-radius:5px; white-space:nowrap; }
+  .badge.PASS{ background:var(--good-wash); color:var(--good); }
+  .badge.FAIL{ background:var(--critical-wash); color:var(--critical); }
+  .badge.BLOCKED{ background:var(--serious-wash); color:var(--serious); }
+  .timing-partial{ font-size:10.5px; font-style:italic; color:var(--warning); display:block; margin-top:2px; }
+
+  .tb-timeline{ display:flex; flex-direction:column; }
+  .tb-tl-row{ display:flex; gap:14px; padding:7px 0; border-bottom:1px solid var(--line); font-size:13px; }
+  .tb-tl-row:last-child{ border-bottom:none; }
+  .tb-tl-time{ width:150px; flex-shrink:0; font-family:var(--font-mono); color:var(--ink-muted); font-size:12px; }
+  .tb-tl-label{ color:var(--ink-2); }
+  .tb-tl-label b{ color:var(--ink); }
+
+  .tb-overhead-box{ margin:0; padding:0; }
+  .tb-overhead-box .oh-title{ font-size:12px; font-weight:700; color:var(--ink-2); margin-bottom:8px; }
+  .tb-oh-rows{ display:flex; flex-direction:column; gap:6px; }
+  .tb-oh-row{ display:grid; grid-template-columns:minmax(0,1fr) 90px 80px; align-items:center; column-gap:16px; font-size:12.5px; color:var(--ink-2); }
+  .tb-oh-row .oh-val{ font-family:var(--font-mono); color:var(--ink); white-space:nowrap; text-align:right; }
+  .tb-phase-note{ font-size:12px; color:var(--ink-muted); margin:-6px 0 14px; }
+
+  /* --- overhead-row detail popup (added 2026-09-30): every .tb-oh-row opens #tbModal --- */
+  .tb-oh-row.tb-oh-click{ cursor:pointer; padding:6px 8px; margin:0 -8px; border-radius:8px; border:1px solid transparent; }
+  .tb-oh-row.tb-oh-click:hover, .tb-oh-row.tb-oh-click:focus-visible{ background:var(--accent-wash); border-color:var(--accent); outline:none; }
+  .tb-table tr.tb-oh-click{ cursor:pointer; }
+  .tb-table tr.tb-oh-click:hover td, .tb-table tr.tb-oh-click:focus-visible td{ background:var(--accent-wash); }
+  .tb-table td.oh-more{ color:var(--accent-ink); font-size:11px; font-weight:700; white-space:nowrap; text-align:right; }
+  .tb-oh-row .oh-more{ color:var(--accent-ink); font-size:11px; font-weight:700; white-space:nowrap; text-align:right; }
+  @media (max-width:560px){ .tb-oh-row{ grid-template-columns:minmax(0,1fr) auto; } .tb-oh-row .oh-more{ display:none; } }
+  .tb-modal{ position:fixed; inset:0; z-index:50; display:flex; align-items:center; justify-content:center; padding:20px; background:rgba(10,14,21,.55); }
+  .tb-modal.js-hidden{ display:none; }
+  .tb-modal-card{ background:var(--surface); color:var(--ink); border:1px solid var(--line-strong); border-radius:14px; box-shadow:0 18px 50px var(--shadow); width:min(720px,100%); max-height:88vh; overflow:auto; padding:20px 22px; }
+  .tb-modal-head{ display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:12px; }
+  .tb-modal-title{ font-size:16px; font-weight:700; }
+  .tb-modal-x{ border:1px solid var(--line-strong); background:var(--surface-2); color:var(--ink); border-radius:8px; padding:2px 10px; font-size:16px; cursor:pointer; }
+  .tb-modal-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-bottom:14px; }
+  .tb-modal-grid .mg{ background:var(--surface-2); border-radius:10px; padding:8px 12px; }
+  .tb-modal-grid .mg .k{ font-size:10.5px; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-muted); font-weight:700; }
+  .tb-modal-grid .mg .v{ font-size:13px; font-family:var(--font-mono); margin-top:2px; }
+  .tb-modal h4{ margin:12px 0 4px; font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-2); }
+  .tb-modal p, .tb-modal li{ font-size:13px; line-height:1.55; color:var(--ink-2); margin:0 0 4px; }
+  .tb-modal ol{ margin:0; padding-left:20px; }
+  .tb-modal .mnote{ margin-top:14px; font-size:11.5px; color:var(--ink-muted); }
+  /* --- collapsible sections 2-6 (click the title) --- */
+  details.tb-sec{ margin:0; }
+  details.tb-sec > summary{ font-size:15px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-2);
+      border-bottom:1px solid var(--line); padding-bottom:6px; margin:32px 0 14px; cursor:pointer; list-style:none; }
+  details.tb-sec > summary::-webkit-details-marker{ display:none; }
+  details.tb-sec > summary:hover{ color:var(--accent-ink); }
+  /* --- Expand all / Collapse all above section 2 --- */
+.tc-actions{ display:flex; justify-content:flex-end; gap:8px; margin:32px 0 8px; }
+.tc-actions button{ padding:7px 12px; border-radius:7px; border:1px solid var(--line-strong); background:var(--surface); color:var(--ink-2); font-size:12px; font-weight:600; cursor:pointer; }
+.tc-cat-actions{ display:flex; justify-content:flex-end; gap:8px; margin:4px 0 10px; }
+.tc-cat-actions button{ padding:5px 10px; border-radius:7px; border:1px solid var(--line-strong); background:var(--surface); color:var(--ink-2); font-size:11px; font-weight:600; cursor:pointer; }
+.tc-cat-actions button:hover{ background:var(--surface-2); }
+.tc-actions button:hover{ background:var(--surface-2); }
+</style>
+</head><body><div class="wrap">
+
+<!-- DATA: back-link, always relative: ./<slug>.html -->
+<a class="tb-back" href="./20260930-140455_SeatMap-GulfAir-KSA-Round12.html">&larr; Back to QA Execution Report</a>
+
+<div class="header">
+<h1>Execution Time Breakdown</h1>
+</div>
+
+<!-- DATA: meta-card - Total Duration / Execution Start / Execution End; must equal the main report's Execution Duration / Started / Ended exactly. -->
+<div class="meta-card dashboard-card">
+<div class="field-row">
+<div class="field"><span class="k">Total Duration</span><span class="v">19m 24s</span></div>
+<div class="field"><span class="k">Execution Start</span><span class="v">2026-09-30 11:04:55 UTC</span></div>
+<div class="field"><span class="k">Execution End</span><span class="v">2026-09-30 11:24:18 UTC</span></div>
+</div>
+</div>
+
+<!-- DATA: 1. Time Breakdown - always all five cards in this order (Test Case Execution, Waiting, Claude / AI Processing, Reporting, Other / Overhead), even at 0s. Percentages are of Total Duration, one decimal. Then the bar chart (same five rows) and the reconciliation line (Accounted Time = Total Duration + check mark; if they differ by more than ~1s replace it with a .tb-warning block). Section 1 is always visible (not collapsible). -->
+<h2 class="section-num">1. Time Breakdown</h2>
+<div class="tb-cat-cards">
+<div class="tb-cat-card exec dashboard-card"><div class="val">6m 21s</div><div class="pct">32.7%</div><div class="lbl"><span class="swatch" style="background:var(--time-exec)"></span>Test Case Execution</div></div>
+<div class="tb-cat-card wait dashboard-card"><div class="val">0s</div><div class="pct">0.0%</div><div class="lbl"><span class="swatch" style="background:var(--time-wait)"></span>Waiting</div></div>
+<div class="tb-cat-card claude dashboard-card"><div class="val">0s</div><div class="pct">0.0%</div><div class="lbl"><span class="swatch" style="background:var(--time-claude)"></span>Claude / AI Processing</div></div>
+<div class="tb-cat-card report dashboard-card"><div class="val">1m 23s</div><div class="pct">7.1%</div><div class="lbl"><span class="swatch" style="background:var(--time-report)"></span>Reporting</div></div>
+<div class="tb-cat-card overhead dashboard-card"><div class="val">11m 40s</div><div class="pct">60.1%</div><div class="lbl"><span class="swatch" style="background:var(--time-overhead)"></span>Other / Overhead</div></div>
+</div>
+
+<div class="dashboard-card">
+<div class="tb-bars">
+<div class="tb-bar-row"><div class="tb-bar-label"><span class="swatch" style="display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--time-exec)"></span>Test Case Execution</div><div class="tb-bar-track"><div class="tb-bar-fill" style="width:32.7%;background:var(--time-exec)"></div></div><div class="tb-bar-value">6m 21s &middot; 32.7%</div></div>
+<div class="tb-bar-row"><div class="tb-bar-label"><span class="swatch" style="display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--time-wait)"></span>Waiting</div><div class="tb-bar-track"><div class="tb-bar-fill" style="width:0.0%;background:var(--time-wait)"></div></div><div class="tb-bar-value">0s &middot; 0.0%</div></div>
+<div class="tb-bar-row"><div class="tb-bar-label"><span class="swatch" style="display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--time-claude)"></span>Claude / AI Processing</div><div class="tb-bar-track"><div class="tb-bar-fill" style="width:0.0%;background:var(--time-claude)"></div></div><div class="tb-bar-value">0s &middot; 0.0%</div></div>
+<div class="tb-bar-row"><div class="tb-bar-label"><span class="swatch" style="display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--time-report)"></span>Reporting</div><div class="tb-bar-track"><div class="tb-bar-fill" style="width:7.1%;background:var(--time-report)"></div></div><div class="tb-bar-value">1m 23s &middot; 7.1%</div></div>
+<div class="tb-bar-row"><div class="tb-bar-label"><span class="swatch" style="display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--time-overhead)"></span>Other / Overhead</div><div class="tb-bar-track"><div class="tb-bar-fill" style="width:60.1%;background:var(--time-overhead)"></div></div><div class="tb-bar-value">11m 40s &middot; 60.1%</div></div>
+</div>
+
+<div class="tb-reconcile">Accounted Time: <b>19m 24s</b> &nbsp;=&nbsp; Total Duration: <b>19m 24s</b> &nbsp;&#10003;</div>
+</div>
+
+<!-- DATA: Expand all / Collapse all for sections 2-6 (ids tbExpandAll / tbCollapseAll, wired by the generic script). Always present. -->
+<div class="tc-actions">
+<button type="button" id="tbExpandAll">Expand all</button>
+<button type="button" id="tbCollapseAll">Collapse all</button>
+</div>
+<!-- DATA: sections 2-6 are each a details.tb-sec (open by default, no chevron); the title is the clickable summary. 2. Execution Phases - one row per phase (Test Execution, Result Collection, Bug Reporting, Report Generation; those with both a start and an end line; Start/End HH:MM:SS, % of total). Every reporting_op, plus "Per-test-case JSONL + Markdown writes (N test cases)" when test cases carry reporting_started_at/ended_at, is an indented sub-row (tr.tb-sub, "&#8627; " prefix) directly under the phase whose start/end window contains it (Bug Report Generation under Bug Reporting; Final HTML and Time Breakdown under Report Generation; the per-test-case writes under Result Collection); a sub-row opens its own popup. The tfoot "Total Reporting Time" equals the Reporting card (shown as exact value, with "card: Ns rounded"). There is no separate Reporting Breakdown section. Keep the .tb-phase-note whenever a "Test Execution" phase exists, with this run's two numbers. -->
+<details class="tb-sec" open><summary>2. Execution Phases</summary>
+<div class="tb-phase-note"><b>Two different measurements of the same stage:</b><br>
+&bull; <b>Test Case Execution (4m 25s, section 1)</b> &mdash; only the time inside each test case, from its first request to its verdict: TC-A 1m 13s + TC-B 1m 23s + TC-C 1m 48s.<br>
+&bull; <b>Test Execution phase (7m 55s, this table)</b> &mdash; the whole stage on the clock, from 14:24:13 to 14:32:08. It also contains the time <i>between</i> test cases (about 17s before TC-B and 23s before TC-C, spent reading results and preparing the next test case) and the time after the last test case until the phase was closed (about 2m 13s, spent writing results to the log).<br>
+The difference (7m 55s &minus; 4m 25s = 3m 30s) is counted as <b>Overhead</b>, not as test time &mdash; but it is only <i>part</i> of the total Overhead in section 1 (6m 28s). The rest is time outside this phase that has no label of its own: about 1m 16s idle before Bug Reporting started and about 1m 41s inside Report Generation. Phase percentages here do not add up to 100% when there are gaps between phases, because those gaps belong to no phase.</div>
+<div class="dashboard-card tb-table-wrap">
+<table class="tb-table">
+<thead><tr><th>Phase</th><th>Start</th><th>End</th><th class="num">Duration</th><th class="num">%</th><th></th></tr></thead>
+<tbody>
+<tr class="tb-oh-click" role="button" tabindex="0" data-detail="{}"><td>Test Execution</td><td>11:04:55</td><td>11:19:40</td><td class="num">14m 46s</td><td class="num">76.1%</td><td class="oh-more">Details &rsaquo;</td></tr>
+<tr class="tb-oh-click" role="button" tabindex="0" data-detail="{}"><td>Result Collection</td><td>11:19:40</td><td>11:19:48</td><td class="num">8s</td><td class="num">0.7%</td><td class="oh-more">Details &rsaquo;</td></tr>
+<tr class="tb-oh-click tb-sub" role="button" tabindex="0" data-detail="{}"><td><span class="tb-sub-arrow">&#8627;</span>Per-test-case JSONL + Markdown writes (11 test cases)</td><td>11:19:40</td><td>11:19:48</td><td class="num">1s</td><td class="num">0.1%</td><td class="oh-more">Details &rsaquo;</td></tr>
+<tr class="tb-oh-click" role="button" tabindex="0" data-detail="{}"><td>Bug Reporting</td><td>11:19:48</td><td>11:21:09</td><td class="num">1m 22s</td><td class="num">7.0%</td><td class="oh-more">Details &rsaquo;</td></tr>
+<tr class="tb-oh-click tb-sub" role="button" tabindex="0" data-detail="{}"><td><span class="tb-sub-arrow">&#8627;</span>Bug Report Generation</td><td>11:19:48</td><td>11:21:09</td><td class="num">1m 22s</td><td class="num">7.0%</td><td class="oh-more">Details &rsaquo;</td></tr>
+<tr class="tb-oh-click" role="button" tabindex="0" data-detail="{}"><td>Report Generation</td><td>11:21:09</td><td>11:24:18</td><td class="num">3m 9s</td><td class="num">16.2%</td><td class="oh-more">Details &rsaquo;</td></tr>
+<tr class="tb-oh-click tb-sub" role="button" tabindex="0" data-detail="{}"><td><span class="tb-sub-arrow">&#8627;</span>Final HTML Report Generation</td><td>11:24:18</td><td>11:24:18</td><td class="num">142 ms</td><td class="num">0.0%</td><td class="oh-more">Details &rsaquo;</td></tr>
+<tr class="tb-oh-click tb-sub" role="button" tabindex="0" data-detail="{}"><td><span class="tb-sub-arrow">&#8627;</span>Time Breakdown Report Generation</td><td>11:24:18</td><td>11:24:18</td><td class="num">115 ms</td><td class="num">0.0%</td><td class="oh-more">Details &rsaquo;</td></tr>
+</tbody>
+<tfoot><tr><td colspan="3"><b>Total Reporting Time</b> <span class="tb-foot-note">(sum of the &#8627; rows above)</span></td><td class="num"><b>1m 23s</b></td><td colspan="2" class="num"><span class="tb-foot-note">card: 1m 23s rounded</span></td></tr></tfoot>
+</table>
+</div>
+
+</details>
+<!-- DATA: 3. Claude / AI Operations - one row per ai_operation line; none -> <div class="empty">No AI operations recorded for this run.</div> -->
+<details class="tb-sec" open><summary>3. Claude / AI Operations</summary>
+<div class="dashboard-card tb-table-wrap">
+<div class="empty">No AI operations recorded for this run.</div>
+</div>
+
+</details>
+<!-- DATA: 4. Test Case Time - toolbar (search, status filter, CATEGORY filter #tcbCategoryFilter with one option per category present, Reset, count) then one <tr> per test_case in log order, carrying data-tcid / data-title / data-status / data-cat (kebab-case category slug). Start/End cells: data-sort-v = epoch ms; duration cells: data-sort-v = seconds. timing:"partial" -> <span class="timing-partial">Timing: Partial</span>. Closing .tb-reconcile line explains Execution overlap and run-level Reporting. -->
+<details class="tb-sec" open><summary>4. Test Case Time</summary>
+<div class="tc-toolbar dashboard-card">
+<input type="search" id="tcbSearch" placeholder="Search test case ID or title...">
+<select id="tcbStatusFilter">
+<option value="">All statuses</option>
+<option value="PASS">Passed</option>
+<option value="FAIL">Failed</option>
+<option value="BLOCKED">Blocked</option>
+</select>
+<select id="tcbCategoryFilter">
+<option value="">All categories</option>
+<option value="positive">Positive</option>
+<option value="validation">Validation</option>
+<option value="business-rule">Business Rule</option>
+<option value="security">Security</option>
+<option value="documentation">Documentation</option>
+</select>
+<button type="button" id="tcbReset">Reset</button>
+<span class="tc-count" id="tcbCount">11 / 11 shown</span>
+</div>
+<div class="tb-no-results js-hidden" id="tcbNoResults">No test cases match the current search/filter.</div>
+<div class="dashboard-card tb-table-wrap">
+<table class="tcb-table" id="tcbTable">
+<thead><tr>
+<th data-sort="idx" data-type="num">#</th>
+<th data-sort="tcid" data-type="text">Test Case ID</th>
+<th data-sort="title" data-type="text">Test Case</th>
+<th data-sort="status" data-type="text">Status</th>
+<th data-sort="start" data-type="num">Start</th>
+<th data-sort="end" data-type="num">End</th>
+<th data-sort="exec" data-type="num" class="num">Execution</th>
+<th data-sort="wait" data-type="num" class="num">Waiting</th>
+<th data-sort="claude" data-type="num" class="num">Claude</th>
+<th data-sort="report" data-type="num" class="num">Reporting</th>
+<th data-sort="total" data-type="num" class="num">Total</th>
+</tr></thead>
+<tbody>
+<tr data-tcid="TC-SEATMAP-POS-02" data-title="Verify GetSeatMap sets getSeatMapOfferId/getSeatMapResponceID and Book consumes them as ResponseId/selectedOfferId when SeatMap precedes it" data-status="BLOCKED" data-cat="positive">
+<td data-sort-v="1">1</td>
+<td>TC-SEATMAP-POS-02</td>
+<td>Verify GetSeatMap sets getSeatMapOfferId/getSeatMapResponceID and Book consumes them as ResponseId/selectedOfferId when SeatMap precedes it</td>
+<td><span class="badge BLOCKED">BLOCKED</span></td>
+<td data-sort-v="1790766386854">11:06:26</td>
+<td data-sort-v="1790766496996">11:08:16</td>
+<td class="num" data-sort-v="110">1m 50s</td>
+<td class="num" data-sort-v="0">0s</td>
+<td class="num" data-sort-v="0">0s</td>
+<td class="num" data-sort-v="27">27s</td>
+<td class="num" data-sort-v="137">2m 17s</td>
+</tr>
+<tr data-tcid="TC-SEATMAP-VAL-03" data-title="Verify cellID round-trips into Book passengersSelectedSeats.setSegmentsSeats.cellId despite casing difference (cellID vs cellId)" data-status="BLOCKED" data-cat="validation">
+<td data-sort-v="2">2</td>
+<td>TC-SEATMAP-VAL-03</td>
+<td>Verify cellID round-trips into Book passengersSelectedSeats.setSegmentsSeats.cellId despite casing difference (cellID vs cellId)</td>
+<td><span class="badge BLOCKED">BLOCKED</span></td>
+<td data-sort-v="1790766678417">11:11:18</td>
+<td data-sort-v="1790766680136">11:11:20</td>
+<td class="num" data-sort-v="2">2s</td>
+<td class="num" data-sort-v="0">0s</td>
+<td class="num" data-sort-v="0">0s</td>
+<td class="num" data-sort-v="0">0s</td>
+<td class="num" data-sort-v="2">2s</td>
+</tr>
+<tr data-tcid="TC-SEATMAP-VAL-04" data-title="Validate a cellID obtained from one offer's GetSeatMap response is rejected when submitted in Book for a different offer" data-status="FAIL" data-cat="validation">
+<td data-sort-v="3">3</td>
+<td>TC-SEATMAP-VAL-04</td>
+<td>Validate a cellID obtained from one offer's GetSeatMap response is rejected when submitted in Book for a different offer</td>
+<td><span class="badge FAIL">FAIL</span></td>
+<td data-sort-v="1790766711703">11:11:51</td>
+<td data-sort-v="1790766783751">11:13:03</td>
+<td class="num" data-sort-v="72">1m 12s</td>
+<td class="num" data-sort-v="0">0s</td>
+<td class="num" data-sort-v="0">0s</td>
+<td class="num" data-sort-v="27">27s</td>
+<td class="num" data-sort-v="99">1m 39s</td>
+</tr>
+<tr data-tcid="TC-SEATMAP-VAL-07" data-title="Verify window/aisle/extra-legroom/exit-row seat attributes are programmatically derivable from cellCharacteristics for every Seat-category cell" data-status="PASS" data-cat="validation">
+<td data-sort-v="4">4</td>
+<td>TC-SEATMAP-VAL-07</td>
+<td>Verify window/aisle/extra-legroom/exit-row seat attributes are programmatically derivable from cellCharacteristics for every Seat-category cell</td>
+<td><span class="badge PASS">PASS</span></td>
+<td data-sort-v="1790766459801">11:07:39</td>
+<td data-sort-v="1790766462712">11:07:42</td>
+<td class="num" data-sort-v="3">3s</td>
+<td class="num" data-sort-v="0">0s</td>
+<td class="num" data-sort-v="0">0s</td>
+<td class="num" data-sort-v="0">0s</td>
+<td class="num" data-sort-v="3">3s</td>
+</tr>
+<tr data-tcid="TC-SEATMAP-VAL-08" data-title="Verify seatPriceDetails/seatPriceDetailsByPassenger is populated for every AvailablePaid cell and null/absent for every Blocked or Occupied cell" data-status="PASS" data-cat="validation">
+<td data-sort-v="5">5</td>
+<td>TC-SEATMAP-VAL-08</td>
+<td>Verify seatPriceDetails/seatPriceDetailsByPassenger is populated for every AvailablePaid cell and null/absent for every Blocked or Occupied cell</td>
+<td><span class="badge PASS">PASS</span></td>
+<td data-sort-v="1790766459801">11:07:39</td>
+<td data-sort-v="1790766462712">11:07:42</td>
+<td class="num" data-sort-v="3">3s</td>
+<td class="num" data-sort-v="0">0s</td>
+<td class="num" data-sort-v="0">0s</td>
+<td class="num" data-sort-v="0">0s</td>
+<td class="num" data-sort-v="3">3s</td>
+</tr>
+<tr data-tcid="TC-SEATMAP-VAL-09" data-title="Verify cellCode is unique across all cells within one flight segment's seatMapDetails" data-status="PASS" data-cat="validation">
+<td data-sort-v="6">6</td>
+<td>TC-SEATMAP-VAL-09</td>
+<td>Verify cellCode is unique across all cells within one flight segment's seatMapDetails</td>
+<td><span class="badge PASS">PASS</span></td>
+<td data-sort-v="1790766459801">11:07:39</td>
+<td data-sort-v="1790766462712">11:07:42</td>
+<td class="num" data-sort-v="3">3s</td>
+<td class="num" data-sort-v="0">0s</td>
+<td class="num" data-sort-v="0">0s</td>
+<td class="num" data-sort-v="0">0s</td>
+<td class="num" data-sort-v="3">3s</td>
+</tr>
+<tr data-tcid="TC-SEATMAP-VAL-10" data-title="Verify structural uniqueness and domain constraints across decks/zones/rows/columns" data-status="PASS" data-cat="validation">
+<td data-sort-v="7">7</td>
+<td>TC-SEATMAP-VAL-10</td>
+<td>Verify structural uniqueness and domain constraints across decks/zones/rows/columns</td>
+<td><span class="badge PASS">PASS</span></td>
+<td data-sort-v="1790766459801">11:07:39</td>
+<td data-sort-v="1790766462712">11:07:42</td>
+<td class="num" data-sort-v="3">3s</td>
+<td class="num" data-sort-v="0">0s</td>
+<td class="num" data-sort-v="0">0s</td>
+<td class="num" data-sort-v="0">0s</td>
+<td class="num" data-sort-v="3">3s</td>
+</tr>
+<tr data-tcid="TC-SEATMAP-BIZ-03" data-title="Verify overall cellAvailability and per-passenger seatPriceDetailsByPassenger entries are independently reported and internally consistent (not required to list every passenger)" data-status="PASS" data-cat="business-rule">
+<td data-sort-v="8">8</td>
+<td>TC-SEATMAP-BIZ-03</td>
+<td>Verify overall cellAvailability and per-passenger seatPriceDetailsByPassenger entries are independently reported and internally consistent (not required to list every passenger)</td>
+<td><span class="badge PASS">PASS</span></td>
+<td data-sort-v="1790766560028">11:09:20</td>
+<td data-sort-v="1790766573605">11:09:33</td>
+<td class="num" data-sort-v="14">14s</td>
+<td class="num" data-sort-v="0">0s</td>
+<td class="num" data-sort-v="0">0s</td>
+<td class="num" data-sort-v="0">0s</td>
+<td class="num" data-sort-v="14">14s</td>
+</tr>
+<tr data-tcid="TC-SEATMAP-BIZ-04" data-title="Exploratory - confirm GetSeatMap reflects real-time supplier inventory rather than a cached snapshot" data-status="PASS" data-cat="business-rule">
+<td data-sort-v="9">9</td>
+<td>TC-SEATMAP-BIZ-04</td>
+<td>Exploratory - confirm GetSeatMap reflects real-time supplier inventory rather than a cached snapshot</td>
+<td><span class="badge PASS">PASS</span></td>
+<td data-sort-v="1790766720525">11:12:00</td>
+<td data-sort-v="1790766921920">11:15:21</td>
+<td class="num" data-sort-v="201">3m 21s</td>
+<td class="num" data-sort-v="0">0s</td>
+<td class="num" data-sort-v="0">0s</td>
+<td class="num" data-sort-v="0">0s</td>
+<td class="num" data-sort-v="201">3m 21s</td>
+</tr>
+<tr data-tcid="TC-SEATMAP-SEC-01" data-title="Apply the three universal caller-facing security checks (invalid x-api-key, invalid Client-Id, cross-tenant supplier/credentialsSelector) to GetSeatMap" data-status="FAIL" data-cat="security">
+<td data-sort-v="10">10</td>
+<td>TC-SEATMAP-SEC-01</td>
+<td>Apply the three universal caller-facing security checks (invalid x-api-key, invalid Client-Id, cross-tenant supplier/credentialsSelector) to GetSeatMap</td>
+<td><span class="badge FAIL">FAIL</span></td>
+<td data-sort-v="1790766586527">11:09:46</td>
+<td data-sort-v="1790766595405">11:09:55</td>
+<td class="num" data-sort-v="9">9s</td>
+<td class="num" data-sort-v="0">0s</td>
+<td class="num" data-sort-v="0">0s</td>
+<td class="num" data-sort-v="27">27s</td>
+<td class="num" data-sort-v="36">36s</td>
+</tr>
+<tr data-tcid="TC-SEATMAP-SEC-02" data-title="Record that supplier-side authentication security and request/response logging are not independently verifiable through this API black-box contract" data-status="PASS" data-cat="documentation">
+<td data-sort-v="11">11</td>
+<td>TC-SEATMAP-SEC-02</td>
+<td>Record that supplier-side authentication security and request/response logging are not independently verifiable through this API black-box contract</td>
+<td><span class="badge PASS">PASS</span></td>
+<td data-sort-v="1790767151128">11:19:11</td>
+<td data-sort-v="1790767151137">11:19:11</td>
+<td class="num" data-sort-v="0">0s</td>
+<td class="num" data-sort-v="0">0s</td>
+<td class="num" data-sort-v="0">0s</td>
+<td class="num" data-sort-v="0">0s</td>
+<td class="num" data-sort-v="0">0s</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="tb-reconcile">Execution column: rows sum to 6m 59s, minus 38s of overlap (test cases that share one live call or whose chains overlap), = 6m 21s Test Case Execution (section 1). Reporting column: rows sum to 1m 22s, plus 0s of run-level reporting (final HTML and Time Breakdown, not attributable to one test case), = 1m 23s Reporting (section 1).</div>
+
+</details>
+<!-- DATA: 5. Timeline - every phase start/end (except Initialization), every test case "<TC-ID> started", last row "Execution completed" at Total Duration's end. -->
+<details class="tb-sec" open><summary>5. Timeline</summary>
+<div class="dashboard-card">
+<div class="tb-timeline">
+<div class="tb-tl-row"><div class="tb-tl-time">11:04:55</div><div class="tb-tl-label"><b>Test Execution</b> started</div></div>
+<div class="tb-tl-row"><div class="tb-tl-time">11:06:26</div><div class="tb-tl-label">TC-SEATMAP-POS-02 started</div></div>
+<div class="tb-tl-row"><div class="tb-tl-time">11:07:39</div><div class="tb-tl-label">TC-SEATMAP-VAL-07 started</div></div>
+<div class="tb-tl-row"><div class="tb-tl-time">11:07:39</div><div class="tb-tl-label">TC-SEATMAP-VAL-08 started</div></div>
+<div class="tb-tl-row"><div class="tb-tl-time">11:07:39</div><div class="tb-tl-label">TC-SEATMAP-VAL-09 started</div></div>
+<div class="tb-tl-row"><div class="tb-tl-time">11:07:39</div><div class="tb-tl-label">TC-SEATMAP-VAL-10 started</div></div>
+<div class="tb-tl-row"><div class="tb-tl-time">11:09:20</div><div class="tb-tl-label">TC-SEATMAP-BIZ-03 started</div></div>
+<div class="tb-tl-row"><div class="tb-tl-time">11:09:46</div><div class="tb-tl-label">TC-SEATMAP-SEC-01 started</div></div>
+<div class="tb-tl-row"><div class="tb-tl-time">11:11:18</div><div class="tb-tl-label">TC-SEATMAP-VAL-03 started</div></div>
+<div class="tb-tl-row"><div class="tb-tl-time">11:11:51</div><div class="tb-tl-label">TC-SEATMAP-VAL-04 started</div></div>
+<div class="tb-tl-row"><div class="tb-tl-time">11:12:00</div><div class="tb-tl-label">TC-SEATMAP-BIZ-04 started</div></div>
+<div class="tb-tl-row"><div class="tb-tl-time">11:19:11</div><div class="tb-tl-label">TC-SEATMAP-SEC-02 started</div></div>
+<div class="tb-tl-row"><div class="tb-tl-time">11:19:40</div><div class="tb-tl-label"><b>Test Execution</b> ended</div></div>
+<div class="tb-tl-row"><div class="tb-tl-time">11:19:48</div><div class="tb-tl-label"><b>Bug Reporting</b> started</div></div>
+<div class="tb-tl-row"><div class="tb-tl-time">11:21:09</div><div class="tb-tl-label"><b>Bug Reporting</b> ended</div></div>
+<div class="tb-tl-row"><div class="tb-tl-time">11:21:09</div><div class="tb-tl-label"><b>Report Generation</b> started</div></div>
+<div class="tb-tl-row"><div class="tb-tl-time">11:24:18</div><div class="tb-tl-label"><b>Report Generation</b> ended</div></div>
+<div class="tb-tl-row"><div class="tb-tl-time">11:24:18</div><div class="tb-tl-label">Execution completed</div></div>
+</div>
+</div>
+
+</details>
+<!-- DATA: 6. Other / Overhead (own section, last). One .tb-oh-row.tb-oh-click per computed gap of 2s or more (gaps under 2s merge into one "Short gaps ..." row); data-detail is the popup JSON {title,start,end,duration,share,before,after,steps,note}. Labels/steps come from the matching overhead_detail line (log-schema.md), else a generic note. Row durations must sum to the Overhead card. Popup markup (#tbModal) and its script are generic. -->
+<details class="tb-sec" open><summary>6. Other / Overhead</summary>
+<div class="dashboard-card">
+<div class="tb-overhead-box">
+<div class="oh-title">What's in Other / Overhead (11m 40s) &mdash; click a row for details</div>
+<div class="tb-oh-rows">
+<div class="tb-oh-row tb-oh-click" role="button" tabindex="0" data-detail="{&quot;title&quot;:&quot;Setup before the first test case&quot;,&quot;start&quot;:&quot;2026-09-30 11:04:55 UTC&quot;,&quot;end&quot;:&quot;2026-09-30 11:06:26 UTC&quot;,&quot;duration&quot;:&quot;1m 32s&quot;,&quot;share&quot;:&quot;7.9% of total&quot;,&quot;before&quot;:&quot;Phase \&quot;Initialization\&quot; ended at 11:04:55&quot;,&quot;after&quot;:&quot;TC-SEATMAP-POS-02 (whole test case), started 11:06:26&quot;,&quot;steps&quot;:[&quot;Read the Execute_Test_cases skill and its execution-mechanics reference (request templates, ID chaining, report template).&quot;,&quot;Read the Generate_QA_Report skill, the log schema and the Round 11 Markdown report so this run follows the same conventions.&quot;,&quot;Read the CSV rows for the 11 requested test cases.&quot;,&quot;Pulled Round 11's request bodies (Search, AddPassenger for 1 and for 3 passengers) out of its log and saved them as templates.&quot;,&quot;Wrote the PowerShell helper library (HTTP client, redaction, chain builder), created the run slug and logged run_start.&quot;,&quot;Hit a PowerShell parameter error in the Book helper, fixed it, and rebuilt the first chain before the first Book call.&quot;],&quot;note&quot;:&quot;Derived from the log timestamps: the time in this window is not covered by any test-case span, wait, AI operation or reporting operation.&quot;}"><span class="oh-label">Setup before the first test case</span><span class="oh-val">1m 32s</span><span class="oh-more">Details &rsaquo;</span></div>
+<div class="tb-oh-row tb-oh-click" role="button" tabindex="0" data-detail="{&quot;title&quot;:&quot;After the Book failure on chain A2, before the BIZ-03 chain&quot;,&quot;start&quot;:&quot;2026-09-30 11:08:16 UTC&quot;,&quot;end&quot;:&quot;2026-09-30 11:09:20 UTC&quot;,&quot;duration&quot;:&quot;1m 3s&quot;,&quot;share&quot;:&quot;5.4% of total&quot;,&quot;before&quot;:&quot;TC-SEATMAP-POS-02 hop 5 - Book, ended 11:08:16&quot;,&quot;after&quot;:&quot;TC-SEATMAP-BIZ-03 hop 1 - Search, started 11:09:20&quot;,&quot;steps&quot;:[&quot;Read the 409 error body in detail: error code, SocketException context and the embedded email payload - the first sign that a booking had really been created.&quot;,&quot;Inspected the seat-map cell structure (passengersDetails allow-lists, cellCharacteristics) on chain A2.&quot;,&quot;Ran the checks for TC-SEATMAP-VAL-07 (window/aisle/exit-row), VAL-08 (pricing), VAL-09 (unique codes) and VAL-10 (rows, zones, columns) on that one seat map.&quot;,&quot;Decided to run the cases that do not need Book first, while Book was failing.&quot;],&quot;note&quot;:&quot;Derived from the log timestamps: the time in this window is not covered by any test-case span, wait, AI operation or reporting operation.&quot;}"><span class="oh-label">After the Book failure on chain A2, before the BIZ-03 chain</span><span class="oh-val">1m 3s</span><span class="oh-more">Details &rsaquo;</span></div>
+<div class="tb-oh-row tb-oh-click" role="button" tabindex="0" data-detail="{&quot;title&quot;:&quot;After BIZ-03, before SEC-01&quot;,&quot;start&quot;:&quot;2026-09-30 11:09:33 UTC&quot;,&quot;end&quot;:&quot;2026-09-30 11:09:46 UTC&quot;,&quot;duration&quot;:&quot;13s&quot;,&quot;share&quot;:&quot;1.1% of total&quot;,&quot;before&quot;:&quot;TC-SEATMAP-BIZ-03 (whole test case), ended 11:09:33&quot;,&quot;after&quot;:&quot;TC-SEATMAP-SEC-01 (whole test case), started 11:09:46&quot;,&quot;steps&quot;:[&quot;Read the BIZ-03 output: 528 passenger price entries, none outside an allow-list, and the child offered all 24 exit-row seats.&quot;,&quot;Wrote the SEC-01 script with the 8 request variants (control, wrong key, wrong client, two cross-tenant switches and three extra probes).&quot;],&quot;note&quot;:&quot;Derived from the log timestamps: the time in this window is not covered by any test-case span, wait, AI operation or reporting operation.&quot;}"><span class="oh-label">After BIZ-03, before SEC-01</span><span class="oh-val">13s</span><span class="oh-more">Details &rsaquo;</span></div>
+<div class="tb-oh-row tb-oh-click" role="button" tabindex="0" data-detail="{&quot;title&quot;:&quot;After SEC-01, before the third Book attempt&quot;,&quot;start&quot;:&quot;2026-09-30 11:09:55 UTC&quot;,&quot;end&quot;:&quot;2026-09-30 11:10:22 UTC&quot;,&quot;duration&quot;:&quot;27s&quot;,&quot;share&quot;:&quot;2.3% of total&quot;,&quot;before&quot;:&quot;TC-SEATMAP-SEC-01 (whole test case), ended 11:09:55&quot;,&quot;after&quot;:&quot;TC-SEATMAP-POS-02 hop 6 - Book (repeat attempt, fresh chain A3), started 11:10:22&quot;,&quot;steps&quot;:[&quot;Read the SEC-01 results: invalid key/client rejected, supplier switch rejected, GulfAir/UAE on a KSA offer accepted (BUG-17 again).&quot;,&quot;Decided to re-probe Book on a brand-new offer.&quot;,&quot;Ran Search, FareConfirm, AddPassenger and GetSeatMap for chain A3 (about 12 seconds); its Book call is the next interval.&quot;],&quot;note&quot;:&quot;Derived from the log timestamps: the time in this window is not covered by any test-case span, wait, AI operation or reporting operation.&quot;}"><span class="oh-label">After SEC-01, before the third Book attempt</span><span class="oh-val">27s</span><span class="oh-more">Details &rsaquo;</span></div>
+<div class="tb-oh-row tb-oh-click" role="button" tabindex="0" data-detail="{&quot;title&quot;:&quot;After the third Book failure, before VAL-03&quot;,&quot;start&quot;:&quot;2026-09-30 11:10:59 UTC&quot;,&quot;end&quot;:&quot;2026-09-30 11:11:18 UTC&quot;,&quot;duration&quot;:&quot;19s&quot;,&quot;share&quot;:&quot;1.6% of total&quot;,&quot;before&quot;:&quot;TC-SEATMAP-POS-02 hop 6 - Book (repeat attempt, fresh chain A3), ended 11:10:59&quot;,&quot;after&quot;:&quot;TC-SEATMAP-VAL-03 (whole test case), started 11:11:18&quot;,&quot;steps&quot;:[&quot;Confirmed Book was still failing identically (third time) and told the user.&quot;,&quot;Decided to send one real attempt for each seat-carrying Book shape (VAL-03, VAL-04) and to re-read the seat map afterwards for BIZ-04.&quot;,&quot;Wrote that script: picked seats 12C and 12B from the seat maps and built the passengersSelectedSeats payloads.&quot;],&quot;note&quot;:&quot;Derived from the log timestamps: the time in this window is not covered by any test-case span, wait, AI operation or reporting operation.&quot;}"><span class="oh-label">After the third Book failure, before VAL-03</span><span class="oh-val">19s</span><span class="oh-more">Details &rsaquo;</span></div>
+<div class="tb-oh-row tb-oh-click" role="button" tabindex="0" data-detail="{&quot;title&quot;:&quot;After the VAL-03 attempt, before the fresh VAL-04 chains&quot;,&quot;start&quot;:&quot;2026-09-30 11:11:20 UTC&quot;,&quot;end&quot;:&quot;2026-09-30 11:11:51 UTC&quot;,&quot;duration&quot;:&quot;32s&quot;,&quot;share&quot;:&quot;2.7% of total&quot;,&quot;before&quot;:&quot;TC-SEATMAP-VAL-03 (whole test case), ended 11:11:20&quot;,&quot;after&quot;:&quot;TC-SEATMAP-VAL-04 hop 1 - Offer B - Search, started 11:11:51&quot;,&quot;steps&quot;:[&quot;Read the VAL-03 result: \&quot;This booking has already been created (609)\&quot; - the reused offer had already been silently booked by an earlier attempt.&quot;,&quot;Ran the first BIZ-04 seat-map re-reads and a quick VAL-04 try on used offers (fast 409); none of it counted as evidence because the offers were already booked, so those calls are not in the report.&quot;,&quot;Started two fresh chains (Offer B and Offer C) for a clean VAL-04 run.&quot;],&quot;note&quot;:&quot;Derived from the log timestamps: the time in this window is not covered by any test-case span, wait, AI operation or reporting operation.&quot;}"><span class="oh-label">After the VAL-03 attempt, before the fresh VAL-04 chains</span><span class="oh-val">32s</span><span class="oh-more">Details &rsaquo;</span></div>
+<div class="tb-oh-row tb-oh-click" role="button" tabindex="0" data-detail="{&quot;title&quot;:&quot;After BIZ-04, before writing the results to the log&quot;,&quot;start&quot;:&quot;2026-09-30 11:15:21 UTC&quot;,&quot;end&quot;:&quot;2026-09-30 11:19:09 UTC&quot;,&quot;duration&quot;:&quot;3m 47s&quot;,&quot;share&quot;:&quot;19.5% of total&quot;,&quot;before&quot;:&quot;TC-SEATMAP-BIZ-04 (whole test case), ended 11:15:21&quot;,&quot;after&quot;:&quot;TC-SEATMAP-POS-02 log write, started 11:19:09&quot;,&quot;steps&quot;:[&quot;Read the VAL-04 and BIZ-04 results (Book took 47.7 seconds; seat 12B gone from later seat maps).&quot;,&quot;Decoded the confirmation email inside each 409 error body to recover the PNRs and ticket numbers, and found the seat fare in the Offer C booking (1053 SAR).&quot;,&quot;Checked SPEC.md and the PRD lines needed for TC-SEATMAP-SEC-02, and read Round 8 and the bug-report template to decide BLOCKED versus FAIL.&quot;,&quot;Wrote the log-writer script; fixed a syntax error, a wrong ticket-number pattern and a duplicated write before the final run.&quot;],&quot;note&quot;:&quot;Derived from the log timestamps: the time in this window is not covered by any test-case span, wait, AI operation or reporting operation.&quot;}"><span class="oh-label">After BIZ-04, before writing the results to the log</span><span class="oh-val">3m 47s</span><span class="oh-more">Details &rsaquo;</span></div>
+<div class="tb-oh-row tb-oh-click" role="button" tabindex="0" data-detail="{&quot;title&quot;:&quot;Short gaps between the per-test-case log writes (11 gaps under 2 seconds)&quot;,&quot;start&quot;:&quot;2026-09-30 11:19:09 UTC&quot;,&quot;end&quot;:&quot;2026-09-30 11:19:11 UTC&quot;,&quot;duration&quot;:&quot;1s&quot;,&quot;share&quot;:&quot;0.1% of total&quot;,&quot;before&quot;:&quot;the per-test-case log writes&quot;,&quot;after&quot;:&quot;the per-test-case log writes&quot;,&quot;steps&quot;:[&quot;Each test case's log line and Markdown re-render ran back to back; these are the sub-2-second pauses between one render finishing and the next one starting.&quot;],&quot;note&quot;:&quot;Sum of many short gaps, spread between 11:19:09 and 11:19:11.&quot;}"><span class="oh-label">Short gaps between the per-test-case log writes (11 gaps under 2 seconds)</span><span class="oh-val">1s</span><span class="oh-more">Details &rsaquo;</span></div>
+<div class="tb-oh-row tb-oh-click" role="button" tabindex="0" data-detail="{&quot;title&quot;:&quot;After the last test-case log write, before the bug reports&quot;,&quot;start&quot;:&quot;2026-09-30 11:19:11 UTC&quot;,&quot;end&quot;:&quot;2026-09-30 11:19:48 UTC&quot;,&quot;duration&quot;:&quot;37s&quot;,&quot;share&quot;:&quot;3.2% of total&quot;,&quot;before&quot;:&quot;TC-SEATMAP-SEC-02 log write, ended 11:19:11&quot;,&quot;after&quot;:&quot;Bug Report Generation, started 11:19:48&quot;,&quot;steps&quot;:[&quot;Wrote the findings (BUG-16, BUG-07, BUG-17 plus the BUG-11 and BUG-09 re-confirmations), the not-reproduced note and the four cleanup entries to the log.&quot;,&quot;Closed the Test Execution phase and logged run_end.&quot;,&quot;Checked the bug-report template and the Round 8 and Round 11 bug reports before drafting.&quot;],&quot;note&quot;:&quot;Derived from the log timestamps: the time in this window is not covered by any test-case span, wait, AI operation or reporting operation.&quot;}"><span class="oh-label">After the last test-case log write, before the bug reports</span><span class="oh-val">37s</span><span class="oh-more">Details &rsaquo;</span></div>
+<div class="tb-oh-row tb-oh-click" role="button" tabindex="0" data-detail="{&quot;title&quot;:&quot;After the bug reports, before the final report generation&quot;,&quot;start&quot;:&quot;2026-09-30 11:21:09 UTC&quot;,&quot;end&quot;:&quot;2026-09-30 11:24:18 UTC&quot;,&quot;duration&quot;:&quot;3m 9s&quot;,&quot;share&quot;:&quot;16.2% of total&quot;,&quot;before&quot;:&quot;Bug Report Generation, ended 11:21:09&quot;,&quot;after&quot;:&quot;Final HTML Report Generation, started 11:24:18&quot;,&quot;steps&quot;:[&quot;Read the HTML report template and the Time Breakdown template.&quot;,&quot;Wrote the two page generators (Node scripts), ran the first pass to measure render time, and logged the report-generation operations.&quot;],&quot;note&quot;:&quot;Derived from the log timestamps: the time in this window is not covered by any test-case span, wait, AI operation or reporting operation.&quot;}"><span class="oh-label">After the bug reports, before the final report generation</span><span class="oh-val">3m 9s</span><span class="oh-more">Details &rsaquo;</span></div>
+</div>
+</div>
+</div>
+
+</details>
+<div class="tb-modal js-hidden" id="tbModal" role="dialog" aria-modal="true" aria-labelledby="tbModalTitle">
+<div class="tb-modal-card">
+<div class="tb-modal-head"><div class="tb-modal-title" id="tbModalTitle"></div><button type="button" class="tb-modal-x" id="tbModalClose" aria-label="Close">&times;</button></div>
+<div class="tb-modal-grid" id="tbModalGrid"></div>
+<h4>Right before</h4><p id="tbModalBefore"></p>
+<h4>What happened in this window</h4><ol id="tbModalSteps"></ol>
+<h4>Right after</h4><p id="tbModalAfter"></p>
+<div class="mnote" id="tbModalNote"></div>
+</div>
+</div>
+
+<script>
+(function(){
+  var search = document.getElementById('tcbSearch');
+  var statusFilter = document.getElementById('tcbStatusFilter');
+  var catFilter = document.getElementById('tcbCategoryFilter');
+  var resetBtn = document.getElementById('tcbReset');
+  var countEl = document.getElementById('tcbCount');
+  var noResults = document.getElementById('tcbNoResults');
+  var table = document.getElementById('tcbTable');
+  if(!table) return;
+  var tbody = table.tBodies[0];
+  var allRows = Array.prototype.slice.call(tbody.rows);
+  var total = allRows.length;
+
+  function applyFilter(){
+    var q = (search.value || '').trim().toLowerCase();
+    var st = statusFilter.value;
+    var ct = catFilter ? catFilter.value : '';
+    var shown = 0;
+    allRows.forEach(function(row){
+      var matchesQ = !q || (row.getAttribute('data-tcid').toLowerCase().indexOf(q) !== -1) ||
+                     (row.getAttribute('data-title').toLowerCase().indexOf(q) !== -1);
+      var matchesSt = !st || row.getAttribute('data-status') === st;
+      var matchesCt = !ct || row.getAttribute('data-cat') === ct;
+      var show = matchesQ && matchesSt && matchesCt;
+      row.classList.toggle('js-hidden', !show);
+      if(show) shown++;
+    });
+    countEl.textContent = shown + ' / ' + total + ' shown';
+    noResults.classList.toggle('js-hidden', shown !== 0);
+  }
+
+  search.addEventListener('input', applyFilter);
+  statusFilter.addEventListener('change', applyFilter);
+  if (catFilter) catFilter.addEventListener('change', applyFilter);
+  resetBtn.addEventListener('click', function(){
+    search.value = ''; statusFilter.value = ''; if (catFilter) catFilter.value = ''; applyFilter();
+  });
+
+  var sortState = { key: null, dir: 1 };
+  var headers = Array.prototype.slice.call(table.tHead.rows[0].cells);
+  headers.forEach(function(th, colIdx){
+    var key = th.getAttribute('data-sort');
+    if(!key) return;
+    th.addEventListener('click', function(){
+      var dir = (sortState.key === key) ? -sortState.dir : 1;
+      sortState = { key: key, dir: dir };
+      headers.forEach(function(h){ h.querySelectorAll('.sort-arrow').forEach(function(a){ a.remove(); }); });
+      var arrow = document.createElement('span');
+      arrow.className = 'sort-arrow';
+      arrow.textContent = dir === 1 ? '▴' : '▾';
+      th.appendChild(arrow);
+
+      var type = th.getAttribute('data-type');
+      var rows = Array.prototype.slice.call(tbody.rows);
+      rows.sort(function(a, b){
+        var av = a.cells[colIdx].getAttribute('data-sort-v');
+        var bv = b.cells[colIdx].getAttribute('data-sort-v');
+        if(type === 'num'){
+          av = parseFloat(av); bv = parseFloat(bv);
+          return (av - bv) * dir;
+        }
+        av = a.cells[colIdx].textContent.trim().toLowerCase();
+        bv = b.cells[colIdx].textContent.trim().toLowerCase();
+        return av.localeCompare(bv) * dir;
+      });
+      rows.forEach(function(r){ tbody.appendChild(r); });
+    });
+  });
+
+  applyFilter();
+})();
+</script>
+<script>
+(function(){
+  var reset = document.getElementById('tcbReset');
+  var table = document.getElementById('tcbTable');
+  if (!reset || !table) return;
+  var wrap = table.closest('.tb-table-wrap') || table.parentNode;
+  var noRes = document.getElementById('tcbNoResults');
+  function make(id, label, open){
+    var b = document.createElement('button');
+    b.type = 'button'; b.id = id; b.textContent = label;
+    b.addEventListener('click', function(){
+      wrap.hidden = !open;
+      if (noRes) noRes.style.display = open ? '' : 'none';
+    });
+    return b;
+  }
+  reset.parentNode.insertBefore(make('tcbExpandAll', 'Expand all', true), reset);
+  reset.parentNode.insertBefore(make('tcbCollapseAll', 'Collapse all', false), reset);
+})();
+</script>
+
+<script>
+(function(){
+  var modal=document.getElementById("tbModal"); if(!modal) return;
+  var $=function(i){return document.getElementById(i)};
+  function esc(s){var d=document.createElement("div");d.textContent=s==null?"":s;return d.innerHTML}
+  function open(row){
+    var d=JSON.parse(row.getAttribute("data-detail"));
+    $("tbModalTitle").textContent=d.title;
+    $("tbModalGrid").innerHTML=[["Start",d.start],["End",d.end],["Duration",d.duration],["Share of total",d.share]].map(function(x){return "<div class=\"mg\"><div class=\"k\">"+esc(x[0])+"</div><div class=\"v\">"+esc(x[1])+"</div></div>"}).join("");
+    $("tbModalBefore").textContent=d.before; $("tbModalAfter").textContent=d.after;
+    $("tbModalSteps").innerHTML=d.steps.map(function(s){return "<li>"+esc(s)+"</li>"}).join("");
+    $("tbModalNote").textContent=d.note||"";
+    modal.classList.remove("js-hidden"); $("tbModalClose").focus();
+  }
+  function close(){ modal.classList.add("js-hidden"); }
+  Array.prototype.forEach.call(document.querySelectorAll(".tb-oh-click"),function(r){
+    r.addEventListener("click",function(){open(r)});
+    r.addEventListener("keydown",function(e){ if(e.key==="Enter"||e.key===" "){e.preventDefault();open(r)} });
+  });
+  $("tbModalClose").addEventListener("click",close);
+  modal.addEventListener("click",function(e){ if(e.target===modal) close(); });
+  document.addEventListener("keydown",function(e){ if(e.key==="Escape") close(); });
+})();
+</script>
+
+<script>
+(function(){
+  var secs=function(){return Array.prototype.slice.call(document.querySelectorAll("details.tb-sec"))};
+  var e=document.getElementById("tbExpandAll"), c=document.getElementById("tbCollapseAll");
+  if(e) e.addEventListener("click",function(){secs().forEach(function(d){d.open=true})});
+  if(c) c.addEventListener("click",function(){secs().forEach(function(d){d.open=false})});
+})();
+</script>
+
+</div></body></html>

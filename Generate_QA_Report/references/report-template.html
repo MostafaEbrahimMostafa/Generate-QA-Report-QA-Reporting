@@ -1,0 +1,865 @@
+<!--
+  CONSTANT BASE TEMPLATE for NDC_Integration/Artifacts/Logs/<slug>.html — generate-qa-report's FINAL
+  rendered output, built exactly ONCE per run at run_end/interruption from that run's finished
+  .md/.jsonl (see log-schema.md). Never hand-patch a rendered file; regenerate it from the .jsonl.
+
+  CANONICAL SOURCE (fixed 2026-09-30): the <head>/CSS, section order, class names and generic <script> of this file are identical to
+  NDC_Integration/Artifacts/Logs/20260930-140455_SeatMap-GulfAir-KSA-Round12.html (Round 12, the current worked example: 11 cards in 5 categories, BLOCKED flow card with 7 hops, multi-attempt security card, three recurrence defects with History, Not reproduced, Cleanup). The sample cards below are the original Round 9 examples plus "DATA:" annotation comments.
+  Reference generator: ../scripts/render-html.js (reads the .jsonl + the test-case CSV, fills this template). Every run's
+  report must reproduce this exact page shape — same <head>/CSS, same section order, same class names,
+  same generic <script>. Do not redesign, reorder, rename, restyle, or drop sections per run; only
+  replace the example values and repeat/omit the repeatable blocks as the DATA comments say.
+
+  Fixed section order (always in this order):
+    1. header (<h1>QA Execution Report</h1>)
+    2. meta-card (Scope / Coverage / Description | Supplier / Credentials Selector / Environment /
+       Started / Ended / Status)
+    3. [optional] .erratum correction callout — only when an "erratum" line exists
+    4. "1. Executive Summary" — donut + Total/Passed/Failed/Blocked + Execution Duration card
+    5. global Expand all / Collapse all
+    6. "Test case results" — toolbar, no-results message, one details.tc-category per category
+    7. "Findings" — defects / unknown-resolutions (+ optional "also re-confirmed" note)
+    8. [optional] "Not reproduced" — only when a "not_reproduced" line exists
+    9. "Proposed SPEC.md updates"
+   10. "Cleanup / follow-up"
+   11. generic <script> (copy verbatim, never edit per run)
+
+  The six visible per-card rows (Endpoint Name/Request/Response/Expected/Actual/Status) are PLAIN,
+  NEUTRAL, NON-TECHNICAL language; Hops, Evidence, req/response panels and View Test Case stay
+  technical. Full request/response capture (.hop-reqres-panel / .tc-reqres-panel) is the default for
+  every call actually sent. Fully self-contained: inline CSS/JS only, no CDN/fonts.
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NDC Integration - QA Execution Report</title>
+<style>
+  :root{
+    color-scheme: light;
+    --paper:#F3F5F8; --surface:#FFFFFF; --surface-2:#EAEEF4;
+    --ink:#10151F; --ink-2:#45536B; --ink-muted:#7C8AA0;
+    --line:#DDE3EC; --line-strong:#C6CEDC;
+    --accent:#2A78D6; --accent-ink:#1C5CAB; --accent-wash:#E4EEFA;
+    --good:#0CA30C; --warning:#C98A17; --serious:#D9673C; --critical:#D03B3B;
+    --good-wash:rgba(12,163,12,0.12); --warning-wash:rgba(250,178,25,0.16);
+    --serious-wash:rgba(236,131,90,0.14); --critical-wash:rgba(208,59,59,0.12);
+    --shadow:rgba(16,21,31,0.08);
+    --font-sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    --font-mono:ui-monospace,"SF Mono","Cascadia Code","Roboto Mono",Consolas,"Courier New",monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:where(:not([data-theme="light"])){
+      color-scheme: dark;
+      --paper:#0A0E15; --surface:#111826; --surface-2:#16202F;
+      --ink:#EDF1F7; --ink-2:#B7C2D1; --ink-muted:#8290A6;
+      --line:#232E40; --line-strong:#324058;
+      --accent:#3987E5; --accent-ink:#8FBBEF; --accent-wash:#152A45;
+      --good:#35C24A; --warning:#E3A730; --serious:#E88A5E; --critical:#EA5B5B;
+      --good-wash:rgba(53,194,74,0.16); --warning-wash:rgba(227,167,48,0.16);
+      --serious-wash:rgba(232,138,94,0.16); --critical-wash:rgba(234,91,91,0.18);
+      --shadow:rgba(0,0,0,0.5);
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme: dark;
+    --paper:#0A0E15; --surface:#111826; --surface-2:#16202F;
+    --ink:#EDF1F7; --ink-2:#B7C2D1; --ink-muted:#8290A6;
+    --line:#232E40; --line-strong:#324058;
+    --accent:#3987E5; --accent-ink:#8FBBEF; --accent-wash:#152A45;
+    --good:#35C24A; --warning:#E3A730; --serious:#E88A5E; --critical:#EA5B5B;
+    --good-wash:rgba(53,194,74,0.16); --warning-wash:rgba(227,167,48,0.16);
+    --serious-wash:rgba(232,138,94,0.16); --critical-wash:rgba(234,91,91,0.18);
+    --shadow:rgba(0,0,0,0.5);
+  }
+  :root[data-theme="light"]{
+    color-scheme: light;
+    --paper:#F3F5F8; --surface:#FFFFFF; --surface-2:#EAEEF4;
+    --ink:#10151F; --ink-2:#45536B; --ink-muted:#7C8AA0;
+    --line:#DDE3EC; --line-strong:#C6CEDC;
+    --accent:#2A78D6; --accent-ink:#1C5CAB; --accent-wash:#E4EEFA;
+    --good:#0CA30C; --warning:#C98A17; --serious:#D9673C; --critical:#D03B3B;
+    --good-wash:rgba(12,163,12,0.12); --warning-wash:rgba(250,178,25,0.16);
+    --serious-wash:rgba(236,131,90,0.14); --critical-wash:rgba(208,59,59,0.12);
+    --shadow:rgba(16,21,31,0.08);
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{ background:var(--paper); color:var(--ink); font-family:var(--font-sans);
+        font-size:14px; line-height:1.5; -webkit-font-smoothing:antialiased; }
+  @media (prefers-reduced-motion: reduce){ *{ animation-duration:.001ms !important; transition-duration:.001ms !important; } }
+  a{ color:var(--accent-ink); }
+  .wrap{ max-width:960px; margin:0 auto; padding:32px 20px 80px; }
+  .dashboard-card{ background:var(--surface); border:1px solid var(--line-strong); border-radius:24px; padding:24px; }
+  code,.mono{ font-family:var(--font-mono); font-size:.92em; }
+  .header{ display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:24px; }
+  .header-main{ flex:1 1 auto; min-width:280px; }
+  .header h1{ font-size:32px; font-weight:800; margin:0 0 8px; }
+  .header .meta{ color:var(--ink-muted); font-size:13px; }
+  .section-num{ font-size:17px; font-weight:700; color:var(--ink); margin:32px 0 14px; text-transform:none; letter-spacing:normal; border-bottom:none; padding-bottom:0; }
+  .summary-layout{ display:flex; align-items:center; gap:36px; flex-wrap:wrap; margin-bottom:28px; }
+  .donut-block{ display:flex; align-items:center; gap:20px; flex-shrink:0; }
+  .stats-block{ flex:1 1 360px; min-width:280px; display:flex; flex-direction:column; gap:14px; }
+  .scard{ text-align:center; }
+  .scard .lbl{ font-size:15px; font-weight:700; color:var(--ink-muted); margin-top:4px; }
+  .scard .val{ font-size:24px; font-weight:700; color:var(--ink); }
+  .scard .val.pass{ color:var(--good); }
+  .scard .val.fail{ color:var(--critical); }
+  .scard .val.blocked{ color:var(--serious); }
+  .scard-total .lbl{ font-size:17px; margin-top:6px; }
+  .scard-total .val{ font-size:28px; }
+  .time-breakdown-link{ display:inline-block; margin-top:6px; font-size:12px; font-weight:600; color:var(--accent-ink); text-decoration:underline; }
+  summary.section-summary-flex > .section-count-badges,
+  summary.section-summary-flex > .section-count-badge{ float:right; }
+  .section-count-badge{ display:flex; flex-direction:column; align-items:center; justify-content:center;
+      background:var(--surface); border:1px solid var(--line-strong); border-radius:12px; padding:6px 20px;
+      text-transform:none; letter-spacing:normal; flex-shrink:0; }
+  .section-count-badge .scb-val{ font-size:20px; font-weight:700; color:var(--accent-ink); line-height:1.2; }
+  .section-count-badge .scb-lbl{ font-size:11px; color:var(--ink-muted); margin-top:1px; }
+  .section-count-badges{ display:flex; gap:10px; flex-shrink:0; }
+  .scb-val.serious{ color:var(--serious); }
+  .scb-val.accent{ color:var(--accent-ink); }
+  .summary-cards{ display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:12px; }
+  .donut{ width:280px; height:280px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+  .donut-hole{ width:190px; height:190px; border-radius:50%; background:var(--paper); display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  .donut-pct{ font-size:34px; font-weight:800; color:var(--ink); }
+  .donut-sub{ font-size:15px; color:var(--ink-muted); }
+  .donut-legend{ display:flex; flex-direction:column; gap:10px; }
+  .litem{ display:flex; align-items:center; gap:8px; font-size:13px; color:var(--ink-2); white-space:nowrap; }
+  .litem .lcount{ margin-left:4px; color:var(--ink-muted); }
+  .swatch{ width:12px; height:12px; border-radius:3px; flex-shrink:0; }
+  .swatch.pass{ background:var(--good); }
+  .swatch.fail{ background:var(--critical); }
+  .swatch.blocked{ background:var(--serious); }
+  h2{ font-size:15px; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-2);
+      border-bottom:1px solid var(--line); padding-bottom:6px; margin:32px 0 12px; }
+  .section-collapse{ margin:0; }
+  .section-collapse > summary{ font-size:15px; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-2);
+      border-bottom:1px solid var(--line); padding-bottom:6px; margin:32px 0 12px; cursor:pointer; }
+  .section-collapse > summary::-webkit-details-marker{ color:var(--ink-muted); }
+  .tc-section > summary{ margin-top:0; }
+  .tc-category{ background:var(--surface); border:1px solid var(--line-strong); border-radius:12px; margin-bottom:10px; }
+  .tc-category > summary{ display:flex; align-items:center; gap:10px; padding:14px 16px; cursor:pointer; list-style:none; }
+  .tc-category > summary::-webkit-details-marker{ display:none; }
+  .cat-icon{ font-size:16px; flex-shrink:0; width:22px; display:inline-flex; align-items:center; justify-content:center; }
+  .cat-name{ font-weight:700; color:var(--ink); flex-shrink:0; }
+  .cat-counts{ display:flex; gap:14px; margin-left:auto; font-size:12px; }
+  .cc{ font-weight:600; }
+  .cc.pass{ color:var(--good); }
+  .cc.fail{ color:var(--critical); }
+  .cc.blocked{ color:var(--serious); }
+  .cat-chev{ display:inline-block; width:9px; flex-shrink:0; color:var(--ink-muted); font-size:10px; transition:transform .15s ease; }
+  .cat-chev::before{ content:'\25B8'; }
+  details.tc-category[open] > summary .cat-chev{ transform:rotate(90deg); }
+  .tc-category-body{ padding:0 16px 16px; }
+  .tc-category.cat-empty{ display:none; }
+  .tc{ background:var(--surface); border:1px solid var(--line-strong); border-left-width:4px; border-radius:12px; padding:16px 18px; margin-bottom:8px; }
+  .tc.PASS{ border-left-color:var(--good); }
+  .tc.FAIL{ border-left-color:var(--critical); }
+  .tc.BLOCKED{ border-left-color:var(--serious); }
+  .tc-head{ display:flex; justify-content:space-between; gap:10px; font-weight:600; }
+  .badge{ font-size:11px; font-weight:700; padding:2px 8px; border-radius:5px; }
+  .badge.PASS{ background:var(--good-wash); color:var(--good); }
+  .badge.FAIL{ background:var(--critical-wash); color:var(--critical); }
+  .badge.BLOCKED{ background:var(--serious-wash); color:var(--serious); }
+  .tc .row{ margin-top:6px; font-size:13px; color:var(--ink-2); overflow-wrap:anywhere; }
+  .tc .row b{ color:var(--ink); }
+  .view-tc-wrap{ margin-top:10px; }
+  .view-tc > summary{ display:block; text-align:right; color:var(--accent-ink); text-decoration:underline; cursor:pointer; font-size:12px; font-weight:600; list-style:none; }
+  .view-tc > summary::-webkit-details-marker{ display:none; }
+  .view-tc-body{ margin-top:8px; padding:14px 16px; background:var(--surface-2); border:1px solid var(--line); border-radius:8px; font-size:13px; }
+  .vtc-h{ font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-muted); margin:12px 0 4px; }
+  .vtc-h:first-child{ margin-top:0; }
+  .vtc-p{ color:var(--ink-2); overflow-wrap:anywhere; }
+  .vtc-steps{ margin:0; padding-left:18px; color:var(--ink-2); }
+  .vtc-steps li{ margin-bottom:4px; overflow-wrap:anywhere; }
+  details.evidence, details.hops{ margin-top:6px; }
+  details.evidence summary, details.hops summary{ cursor:pointer; font-size:12px; color:var(--accent-ink); }
+  details.evidence .ev-body{ margin-top:4px; padding:8px 10px; background:var(--surface-2); border-radius:6px; font-size:12px; overflow-wrap:anywhere; }
+  .hop{ padding:6px 0; border-top:1px solid var(--line); font-size:12px; }
+  .hop:first-child{ border-top:none; }
+  .hop-endpoint{ font-weight:600; color:var(--ink); }
+  .hop .hd{ color:var(--ink-muted); margin-top:2px; overflow-wrap:anywhere; }
+  .hop .hd.hop-reqres.js-hidden{ display:none; }
+  .hop-reqres-toggle{ margin-left:8px; font-size:11px; font-weight:600; color:var(--accent-ink); text-decoration:underline; cursor:pointer; }
+  .hop-reqres-panel{ margin-top:10px; display:flex; flex-direction:column; gap:18px; }
+  .hop-reqres-panel.js-hidden{ display:none; }
+  .rr-title{ font-size:15px; font-weight:700; color:var(--ink); margin-bottom:6px; }
+  .rr-line{ font-size:13px; color:var(--ink-2); margin-bottom:10px; font-family:var(--font-mono); overflow-wrap:anywhere; }
+  .rr-label{ font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-muted); margin:10px 0 6px; }
+  .rr-box{ background:#0B0E15; color:#D7DEE8; border-radius:10px; padding:14px 16px; font-family:var(--font-mono); font-size:12.5px; overflow:auto; }
+  .rr-headers-box .rr-h-line{ margin-bottom:14px; white-space:pre-wrap; overflow-wrap:anywhere; }
+  .rr-headers-box .rr-h-line:last-child{ margin-bottom:0; }
+  .rr-body-box{ max-height:340px; }
+  .rr-body-box pre{ margin:0; white-space:pre; }
+  .rr-redacted{ color:#8290A6; }
+  .rr-note{ font-size:11px; color:var(--ink-muted); font-style:italic; margin-top:6px; }
+  .tc-status-row{ display:flex; align-items:center; gap:10px; }
+  .tc-reqres-toggle{ margin-left:auto; }
+  .tc-reqres-panel{ margin-top:10px; display:flex; flex-direction:column; gap:18px; }
+  .tc-reqres-panel.js-hidden{ display:none; }
+  .finding{ border-radius:12px; padding:10px 12px; margin-bottom:8px; font-size:13px; overflow-wrap:anywhere; }
+  .finding.defect{ background:var(--serious-wash); border:1px solid var(--serious); }
+  .finding.unknown_resolution{ background:var(--accent-wash); border:1px solid var(--accent); }
+  .finding .kind{ font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.03em; }
+  .cleanup{ background:var(--warning-wash); border:1px solid var(--warning); border-radius:12px; padding:12px 14px; }
+  .cleanup ul{ margin:6px 0 0; padding-left:18px; }
+  .cleanup li{ margin-bottom:6px; overflow-wrap:anywhere; }
+  .empty{ color:var(--ink-muted); font-size:13px; font-style:italic; }
+.meta-card{ margin-top:8px; }
+.fields{ display:flex; flex-direction:column; gap:4px; margin:4px 0 6px; }
+.fields.run-meta{ margin-top:10px; padding-top:10px; border-top:1px solid var(--line); }
+.field-row{ display:flex; flex-wrap:wrap; gap:4px 28px; }
+.field{ font-size:14px; display:flex; gap:6px; }
+.field .k{ color:var(--ink-2); font-weight:700; font-size:15px; letter-spacing:normal; text-transform:none; flex-shrink:0; }
+.field .k::after{ content:':'; }
+.field .v{ color:var(--ink); }
+.tc-actions{ display:flex; justify-content:flex-end; gap:8px; margin:32px 0 8px; }
+.tc-actions button{ padding:7px 12px; border-radius:7px; border:1px solid var(--line-strong); background:var(--surface); color:var(--ink-2); font-size:12px; font-weight:600; cursor:pointer; }
+.tc-cat-actions{ display:flex; justify-content:flex-end; gap:8px; margin:4px 0 10px; }
+.tc-cat-actions button{ padding:5px 10px; border-radius:7px; border:1px solid var(--line-strong); background:var(--surface); color:var(--ink-2); font-size:11px; font-weight:600; cursor:pointer; }
+.tc-cat-actions button:hover{ background:var(--surface-2); }
+.tc-actions button:hover{ background:var(--surface-2); }
+.tc-toolbar{ display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:0 0 14px; position:sticky; top:0; z-index:5; }
+.tc-toolbar input[type="search"]{ flex:1 1 240px; min-width:180px; padding:7px 10px; border-radius:7px; border:1px solid var(--line-strong); background:var(--surface); color:var(--ink); font-size:13px; }
+.tc-toolbar select{ padding:7px 10px; border-radius:7px; border:1px solid var(--line-strong); background:var(--surface); color:var(--ink); font-size:13px; }
+.tc-toolbar button{ padding:7px 12px; border-radius:7px; border:1px solid var(--line-strong); background:var(--surface); color:var(--ink-2); font-size:12px; font-weight:600; cursor:pointer; }
+.tc-toolbar button:hover{ background:var(--surface-2); }
+#tcResetFilters{ color:var(--critical); border-color:var(--critical); }
+#tcResetFilters:hover{ background:var(--critical-wash); }
+.tc-toolbar .tc-count{ font-size:12px; color:var(--ink-muted); margin-left:auto; white-space:nowrap; }
+details.tc > summary.tc-head{ cursor:pointer; list-style:none; }
+details.tc > summary.tc-head::-webkit-details-marker{ display:none; }
+.tc-head .chev{ display:inline-block; width:9px; flex-shrink:0; color:var(--ink-muted); font-size:10px; transition:transform .15s ease; align-self:center; }
+.tc-head .chev::before{ content:'\25B8'; }
+details.tc[open] > summary.tc-head .chev{ transform:rotate(90deg); }
+details.tc.js-hidden{ display:none; }
+.tc-no-results{ padding:28px 20px; text-align:center; color:var(--critical); font-size:18px; font-weight:700; background:var(--critical-wash); border:1px solid var(--critical); border-radius:12px; margin-bottom:10px; }
+.tc-no-results.js-hidden{ display:none; }
+.erratum{ background:var(--warning-wash); border:1px solid var(--warning); border-radius:12px; padding:14px 18px; margin-bottom:24px; font-size:13px; color:var(--ink); line-height:1.55; }
+.erratum .e-title{ font-weight:700; color:var(--warning); margin-bottom:4px; font-size:13px; }
+/* --- optional-block CSS (kept so every run's report can use them; unused rules are harmless) --- */
+.scard .val.accent{ color:var(--accent-ink); }
+.tc-subhead{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin:14px 0 8px; padding-bottom:4px; border-bottom:1px solid var(--line); }
+.tc-subhead:first-child{ margin-top:4px; }
+.tc-subhead-label{ font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; }
+.tc-subhead-label.pos{ color:var(--good); }
+.tc-subhead-label.neg{ color:var(--critical); }
+.tc-subhead-counts{ display:flex; gap:12px; font-size:11px; }
+.rr-attempt-label{ font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--accent-ink); margin:0 0 4px; }
+</style>
+</head><body><div class="wrap">
+
+<!-- DATA: header — <h1> is always literally "QA Execution Report". Nothing else goes here. -->
+<div class="header"><div class="header-main">
+<h1>QA Execution Report</h1>
+</div></div>
+
+<!-- DATA: meta-card — from run_start (+ run_end). First .fields block: Scope (what ran, incl. the
+     TC-IDs for a targeted run), then a .field-row with Coverage ("N of M <suite> test cases ...") and
+     Description (one line of run purpose/context). Second .fields.run-meta block: a .field-row with
+     Supplier / Credentials Selector / Environment / Project Type, then Started, Ended, Status on their
+     own lines. Project Type = "UI", "API" or "Mixed (N UI, M API)" from scripts/project-type.js.
+     Status is COMPLETE or "INTERRUPTED &mdash; after <TC-ID> (N/M)" — never RUNNING here.
+     Ended = MAX timestamp anywhere in the .jsonl when timing data exists (run_end.ended_at, every
+     phase end, every reporting_op.ended_at, every test_case.reporting_ended_at); otherwise
+     run_end.ended_at. The same value feeds Execution Duration and the Time Breakdown page. -->
+<div class="meta-card dashboard-card">
+<div class="fields">
+<div class="field"><span class="k">Scope</span><span class="v">Round 9 targeted run &mdash; 2 test cases from SeatMap_TestCases.csv: TC-BOOK-BIZ-04, TC-BOOK-BIZ-05</span></div>
+<div class="field-row">
+<div class="field"><span class="k">Coverage</span><span class="v">2 of 63 SeatMap test cases (partial, user-requested)</span></div>
+<div class="field"><span class="k">Description</span><span class="v">Also a re-confirmation of whether Round 8's critical Book/Hold outage (BUG-16) still reproduces, since both test cases require a live Book call</span></div>
+</div>
+</div>
+<div class="fields run-meta">
+<div class="field-row">
+<div class="field"><span class="k">Supplier</span><span class="v">GulfAir</span></div>
+<div class="field"><span class="k">Credentials Selector</span><span class="v">KSA</span></div>
+<div class="field"><span class="k">Environment</span><span class="v">staging (STAG_ENV default host) &middot; https://ndc-integration-stg-ne-3.azurewebsites.net/</span></div>
+<div class="field"><span class="k">Project Type</span><span class="v">API</span></div>
+</div>
+<div class="field"><span class="k">Started</span><span class="v">2026-09-29 09:01:45 UTC</span></div>
+<div class="field"><span class="k">Ended</span><span class="v">2026-09-29 09:23:04 UTC</span></div>
+<div class="field"><span class="k">Status</span><span class="v">COMPLETE</span></div>
+</div>
+</div>
+
+<!-- DATA: [OPTIONAL] erratum — render ONLY when the .jsonl has an `erratum` line (a correction made
+     after the report was first published, e.g. a finding re-classified as a recurrence of an existing
+     bug). One block per erratum line: .e-title "&#9888; Correction (post-publication)" + its text.
+     Omit the whole block when there is none — never render an empty callout. -->
+<div class="erratum">
+<div class="e-title">&#9888; Correction (post-publication)</div>
+This report originally filed <code>TC-BOOK-BIZ-05</code>'s exit-row/CHD finding as a new defect
+("BUG-17"). A follow-up cross-round check found both test cases in this run were already executed in
+Round 1 (2026-08-25) and every round since — the finding is the existing <b>BUG-09</b>, now at its
+<b>7th confirmed occurrence</b>, not a new defect. All references below have been corrected; no
+separate "BUG-17" exists. See the Findings section for full detail.
+</div>
+
+<!-- DATA: Executive Summary — recomputed from ALL test_case lines (never hops). Donut conic-gradient
+     stops: good 0%->pass%, critical pass%->(pass+fail)%, serious ->100% (drop zero-width stops).
+     donut-pct = round(passed/total*100)%. Legend shows "N / total" for all three states, even 0.
+     A 1-test-case run still gets the donut. -->
+<h2 class="section-num">1. Executive Summary</h2>
+<div class="summary-layout">
+<div class="donut-block">
+<div class="donut" style="background:conic-gradient(var(--good) 0% 50%, var(--critical) 50% 100%)">
+<div class="donut-hole"><div class="donut-pct">50%</div><div class="donut-sub">pass rate</div></div>
+</div>
+<div class="donut-legend">
+<div class="litem"><span class="swatch pass"></span>Passed <span class="lcount">1 / 2</span></div>
+<div class="litem"><span class="swatch fail"></span>Failed <span class="lcount">1 / 2</span></div>
+<div class="litem"><span class="swatch blocked"></span>Blocked <span class="lcount">0 / 2</span></div>
+</div>
+</div>
+<div class="stats-block">
+<div class="scard scard-total dashboard-card"><div class="val">2</div><div class="lbl">Total Executed Test Cases</div></div>
+<div class="summary-cards">
+<div class="scard dashboard-card"><div class="val pass">1</div><div class="lbl">Passed</div></div>
+<div class="scard dashboard-card"><div class="val fail">1</div><div class="lbl">Failed</div></div>
+<div class="scard dashboard-card"><div class="val blocked">0</div><div class="lbl">Blocked</div></div>
+</div>
+<!-- DATA: Execution Duration = Ended - Started (formatted "21m 19s" / "2h 11m 19s"); omit the card
+     only if there is no Ended timestamp. The "View Time Breakdown" <a> (href ./<slug>_TimeBreakdown.html)
+     appears ONLY when the .jsonl has timing data (>=1 test_case with started_at) — otherwise drop the
+     <a> entirely, never a dead link. -->
+<div class="scard scard-total dashboard-card"><div class="val">21m 19s</div><div class="lbl">Execution Duration</div><a class="time-breakdown-link" href="./20260929-090138_SeatMap-GulfAir-KSA-Round9_TimeBreakdown.html">View Time Breakdown</a></div>
+</div>
+</div>
+
+<!-- DATA: global Expand all / Collapse all — always present, unchanged. -->
+<div class="tc-actions">
+<button type="button" id="tcExpandAll">Expand all</button>
+<button type="button" id="tcCollapseAll">Collapse all</button>
+</div>
+
+<details class="section-collapse tc-section" open>
+<summary>Test case results</summary>
+
+<!-- DATA: toolbar — keep IDs exactly. Category <select> gets one <option> per data-cat rendered below
+     (value = data-cat slug, text = display name), in the same order as the categories. -->
+<div class="tc-toolbar dashboard-card">
+<input type="search" id="tcSearch" placeholder="Search by ID, title, endpoint, PNR...">
+<select id="tcStatusFilter">
+<option value="">All statuses</option>
+<option value="PASS">PASS</option>
+<option value="FAIL">FAIL</option>
+<option value="BLOCKED">BLOCKED</option>
+</select>
+<select id="tcCategoryFilter">
+<option value="">All categories</option>
+<option value="business-rule">Business Rule</option>
+</select>
+<button type="button" id="tcResetFilters">Reset</button>
+<span id="tcCount" class="tc-count"></span>
+</div>
+<div id="tcNoResults" class="tc-no-results js-hidden">No test cases match your search. Try a different keyword, or clear the search/filters above.</div>
+
+<!-- DATA: repeat one details.tc-category per category present in this run. A category is the test
+     case's test-TYPE (the JSONL `category` field: Positive / Negative / Validation / Boundary /
+     Business Rule / Regression / Security / Integration / Documentation / Flow) — NEVER the endpoint.
+     data-cat = kebab-case slug (business-rule, security, flow, ...). Icons (keep consistent across runs):
+     Positive &#9989;  Negative &#10060;  Validation &#9745;&#65039;  Boundary &#128207;
+     Business Rule &#9878;&#65039;  Regression &#128257;  Security &#128274;  Integration &#128279;
+     Documentation &#128196;  Flow &#128256;
+     .cat-counts: always "N passed" and "N failed"; add <span class="cc blocked">N blocked</span> only
+     when N > 0. -->
+<details class="tc-category" data-cat="business-rule" open>
+<summary><span class="cat-icon">&#9878;&#65039;</span><span class="cat-name">Business Rule</span><span class="cat-counts"><span class="cc pass">1 passed</span><span class="cc fail">1 failed</span></span><span class="cat-chev"></span></summary>
+<div class="tc-category-body">
+<div class="tc-cat-actions"><button type="button" class="tc-cat-expand">Expand all</button><button type="button" class="tc-cat-collapse">Collapse all</button></div>
+<!-- DATA: [OPTIONAL] tc-subhead — only when this category really splits into Positive/Negative cases
+     (most single-type categories do not; Round 9's Business Rule category correctly has none):
+<div class="tc-subhead"><span class="tc-subhead-label pos">Positive Cases</span><span class="tc-subhead-counts"><span class="cc pass">1 passed</span><span class="cc fail">0 failed</span></span></div>
+     ...positive cards...
+<div class="tc-subhead"><span class="tc-subhead-label neg">Negative Cases</span><span class="tc-subhead-counts"><span class="cc pass">0 passed</span><span class="cc fail">1 failed</span></span></div>
+     ...negative cards...
+-->
+
+<!-- DATA: test case card — FLOW-LEVEL shape (test_case line has a `hops` array). Repeat one
+     details.tc per test_case line, in log order; class = verdict (PASS/FAIL/BLOCKED). Title = TC-ID in
+     .mono + " - " + title with any "[Endpoint][Type]" CSV prefix stripped. Six plain-language rows in
+     this exact order: Endpoint Name, Request, Response, Expected, Actual, Status. A flow-level card
+     puts NO .tc-reqres-anchor in its Status row — its payloads live in each hop's panel. -->
+<details class="tc PASS">
+<summary class="tc-head"><span><span class="chev"></span><span class="mono">TC-BOOK-BIZ-04</span> - Verify selectedOffer.priceDetails.totalAmount includes totalSelectedSeatsAmount when a seat has been selected</span><span class="badge PASS">PASS</span></summary>
+<div class="row"><b>Endpoint Name:</b> Confirm the final booking price correctly adds in the cost of a selected seat</div>
+<div class="row"><b>Request:</b> Booked a one-way flight from Bahrain to Riyadh for one adult, with a paid seat selected</div>
+<div class="row"><b>Response:</b> The booking succeeded; the final total price included the seat's cost</div>
+<div class="row"><b>Expected:</b> The seat's price should be added into the booking's overall total, not silently dropped</div>
+<div class="row"><b>Actual:</b> Confirmed &mdash; the total price (1113 SAR) exactly equals the fare before the seat (993 SAR) plus the seat's own price (120 SAR); no billing gap found</div>
+<div class="row"><b>Status:</b> <span class="badge PASS">PASS</span></div>
+<!-- DATA: evidence — always present; the raw, technical fact pattern behind Actual (IDs, PNRs,
+     amounts, ticket numbers), already redacted. -->
+<details class="evidence"><summary>Evidence</summary><div class="ev-body">FareConfirm pre-seat totalAmount=993 SAR (base 640 + tax 353). Book post-seat totalAmount=1113 SAR (base 640 + tax 353 + ancillary 0 + seat 120). Delta 1113-993=120 == seat price exactly. pnr TPQJOT, ticket 722136995731.</div></details>
+<!-- DATA: hops — summary "Hops (N)". One .hop per hop: verdict badge + ".hop-endpoint" "<n>. <Endpoint>",
+     then five TECHNICAL .hd lines (Request, Response, Expected, Actual, Evidence), then a
+     .hop-reqres-panel. The script adds the "View req & response" toggle automatically. -->
+<details class="hops"><summary>Hops (5)</summary>
+<div class="hop"><span class="badge PASS">PASS</span> <span class="hop-endpoint">1. Search</span>
+<div class="hd"><b>Request:</b> POST api/V2/FlightSearch/Search - GulfAir/KSA, BAH-&gt;RUH 2027-07-01, ADT1</div>
+<div class="hd"><b>Response:</b> 200 - 25 offers, offer[0] canBeHeld=true haveBundles=false isSeatMapRequired=false offerHasAncillary=true, totalAmount=993 SAR</div>
+<div class="hd"><b>Expected:</b> 200, non-empty offers[]</div>
+<div class="hd"><b>Actual:</b> 200, 25 offers returned</div>
+<div class="hd"><b>Evidence:</b> responseId cc50453d-d715-4d5c-b8f9-1144683a358b, offer[0] totalAmount 993 SAR</div>
+<!-- DATA: hop-reqres-panel — DEFAULT for every hop actually sent. Request: .rr-line "POST to <full URL>",
+     HEADERS box (x-api-key ALWAYS "&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;(redacted)"), BODY box with the
+     pretty-printed JSON. Response: "Status code <N>" + BODY box. Long opaque tokens -> "&lt;N-char opaque
+     token&gt;"; long arrays may be truncated with a /* ...N more..., omitted for length... */ comment AND an
+     .rr-note saying what was kept. Headers box may be omitted on later hops that reuse identical headers.
+     Raw supplierRequest/supplierResponse/OriginalSupplierResponse -> "[REDACTED - ... per SPEC.md §7.14]".
+     Never fabricate headers that weren't captured — say so in an .rr-note. -->
+<div class="hop-reqres-panel">
+<div class="rr-title">Request</div>
+<div class="rr-line">POST to https://ndc-integration-stg-ne-3.azurewebsites.net/api/V2/FlightSearch/Search</div>
+<div class="rr-label">HEADERS</div>
+<div class="rr-box rr-headers-box">
+<div class="rr-h-line">x-api-key: <span class="rr-redacted">&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;(redacted)</span></div>
+<div class="rr-h-line">Client-Id: NDC-Core</div>
+<div class="rr-h-line">Content-Type: application/json</div>
+</div>
+<div class="rr-label">BODY</div>
+<div class="rr-box rr-body-box"><pre>{
+    "supplier": "GulfAir", "credentialsSelector": "KSA", "isDebug": false,
+    "searchCriteria": [ { "origin": "BAH", "destination": "RUH", "date": "2027-07-01" } ],
+    "passengers": [ { "passengerTypeCode": "ADT", "count": "1" } ]
+}</pre></div>
+<div class="rr-title" style="margin-top:18px;">Response</div>
+<div class="rr-line">Status code 200</div>
+<div class="rr-label">BODY</div>
+<div class="rr-box rr-body-box"><pre>{
+    "responseId": "cc50453d-d715-4d5c-b8f9-1144683a358b",
+    "offers": [ { "offerId": "&lt;187-char opaque token&gt;", "canBeHeld": true, "haveBundles": false,
+        "isSeatMapRequired": false, "offerHasAncillary": true,
+        "priceDetails": { "totalAmount": {"amount":993,"currency":"SAR"} } }
+        /* ...24 more offers, omitted for length... */ ]
+}</pre></div>
+<div class="rr-note">25-offer array truncated for report length; offer[0] used downstream.</div>
+</div>
+</div>
+<div class="hop"><span class="badge PASS">PASS</span> <span class="hop-endpoint">2. FareConfirm</span>
+<div class="hd"><b>Request:</b> POST api/v2/FlightSearch/FareConfirm - ResponseId/selectedOfferId from Search offer[0]</div>
+<div class="hd"><b>Response:</b> 200 - selectedOffer canBeHeld=true isSeatMapRequired=false, priceDetails.totalAmount=993 SAR (base 640 + tax 353)</div>
+<div class="hd"><b>Expected:</b> 200, selectedOffer with current pricing</div>
+<div class="hd"><b>Actual:</b> 200, price unchanged from Search (993 SAR), base+tax reconciles (640+353=993)</div>
+<div class="hd"><b>Evidence:</b> responseId cc50453d-d715-4d5c-b8f9-1144683a358b, totalAmount 993=640+353</div>
+<div class="hop-reqres-panel">
+<div class="rr-title">Request</div>
+<div class="rr-line">POST to https://ndc-integration-stg-ne-3.azurewebsites.net/api/v2/FlightSearch/FareConfirm</div>
+<div class="rr-label">HEADERS</div>
+<div class="rr-box rr-headers-box">
+<div class="rr-h-line">x-api-key: <span class="rr-redacted">&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;(redacted)</span></div>
+<div class="rr-h-line">Client-Id: NDC-Core</div>
+<div class="rr-h-line">Content-Type: application/json</div>
+</div>
+<div class="rr-label">BODY</div>
+<div class="rr-box rr-body-box"><pre>{
+    "supplier": "GulfAir", "credentialsSelector": "KSA",
+    "ResponseId": "cc50453d-d715-4d5c-b8f9-1144683a358b",
+    "selectedOfferId": "&lt;offer[0] offerId, redacted for length&gt;"
+}</pre></div>
+<div class="rr-title" style="margin-top:18px;">Response</div>
+<div class="rr-line">Status code 200</div>
+<div class="rr-label">BODY</div>
+<div class="rr-box rr-body-box"><pre>{
+    "responseId": "cc50453d-d715-4d5c-b8f9-1144683a358b",
+    "selectedOffer": { "canBeHeld": true, "haveBundles": false, "isSeatMapRequired": false, "offerHasAncillary": true,
+        "priceDetails": { "totalAmount": {"amount":993,"currency":"SAR"}, "totalTaxAmount": {"amount":353,"currency":"SAR"},
+            "totalBaseAmount": {"amount":640,"currency":"SAR"} } }
+}</pre></div>
+</div>
+</div>
+<div class="hop"><span class="badge PASS">PASS</span> <span class="hop-endpoint">3. AddPassenger</span>
+<div class="hd"><b>Request:</b> POST api/v2/Passenger/AddPassengerDetails - Pax1 ADT Mostafa Ibrahim</div>
+<div class="hd"><b>Response:</b> 200 - offerId/responseId returned (on second attempt)</div>
+<div class="hd"><b>Expected:</b> 200, offerId/responseId non-empty</div>
+<div class="hd"><b>Actual:</b> First attempt (passengersList.name.middle="kady" vs travelDocument.name.middle="" mismatch, matching the V2 collection's own saved example) rejected 400 PredicateValidator "Invalid travel document information" &mdash; re-confirms <b>BUG-10</b>, unchanged since Round 2, now 9 consecutive rounds. Second attempt (blank middle name on both objects, the documented workaround) succeeded 200.</div>
+<div class="hd"><b>Evidence:</b> offerId len 563; BUG-10 workaround applied</div>
+<div class="hop-reqres-panel">
+<!-- DATA: a hop that needed a retry (e.g. a known-bug workaround) shows every attempt inside the same
+     panel with suffixed titles: "Request (first attempt, rejected)", "Response (first attempt)",
+     "Response (second attempt, <what changed>)". "BODY (key excerpt)" is allowed when only the fields
+     that differ matter. -->
+<div class="rr-title">Request (first attempt, rejected)</div>
+<div class="rr-line">POST to https://ndc-integration-stg-ne-3.azurewebsites.net/api/v2/Passenger/AddPassengerDetails</div>
+<div class="rr-label">BODY (key excerpt)</div>
+<div class="rr-box rr-body-box"><pre>{
+    "passengersList": { "Pax1": {
+        "name": { "first": "Mostafa", "middle": "kady", "last": "Ibrahim" },
+        "travelDocument": { "name": { "first": "Mostafa", "middle": "", "last": "Ibrahim" }, "...": "..." }
+    } }
+}</pre></div>
+<div class="rr-title" style="margin-top:18px;">Response (first attempt)</div>
+<div class="rr-line">Status code 400</div>
+<div class="rr-box rr-body-box"><pre>{"Status":400,"ErrorCode":"NDC-INT-TEC-A0001","ErrorMessage":"Invalid request. Please check the request parameters and try again.","Context":[{"Name":"PredicateValidator","Value":"Invalid travel document information"}]}</pre></div>
+<div class="rr-title" style="margin-top:18px;">Response (second attempt, middle name blanked on both objects)</div>
+<div class="rr-line">Status code 200</div>
+<div class="rr-box rr-body-box"><pre>{
+    "offerId": "&lt;563-char opaque token&gt;",
+    "responseId": "cc50453d-d715-4d5c-b8f9-1144683a358b"
+}</pre></div>
+</div>
+</div>
+<div class="hop"><span class="badge PASS">PASS</span> <span class="hop-endpoint">4. GetSeatMap</span>
+<div class="hd"><b>Request:</b> POST api/V2/SeatMap/Seat - ResponseId/selectedOfferId=AddPassenger IDs</div>
+<div class="hd"><b>Response:</b> 200 - 30 rows, 179 AvailablePaid cells; seat 8A selected (120 SAR)</div>
+<div class="hd"><b>Expected:</b> 200, offerId/responseId non-empty, seatMapDetails populated</div>
+<div class="hd"><b>Actual:</b> 200, populated despite isSeatMapRequired=false on this offer (flag not a hard gate, consistent with SPEC.md INFERRED caveat)</div>
+<div class="hd"><b>Evidence:</b> segment GF-GF161-GF161-2027070102-2027070104-O, cell 8A AvailablePaid 120 SAR</div>
+<div class="hop-reqres-panel">
+<div class="rr-title">Request</div>
+<div class="rr-line">POST to https://ndc-integration-stg-ne-3.azurewebsites.net/api/V2/SeatMap/Seat</div>
+<div class="rr-label">BODY</div>
+<div class="rr-box rr-body-box"><pre>{
+    "supplier": "GulfAir", "credentialsSelector": "KSA",
+    "ResponseId": "cc50453d-d715-4d5c-b8f9-1144683a358b",
+    "selectedOfferId": "&lt;AddPassenger offerId, redacted for length&gt;"
+}</pre></div>
+<div class="rr-title" style="margin-top:18px;">Response</div>
+<div class="rr-line">Status code 200</div>
+<div class="rr-label">BODY</div>
+<div class="rr-box rr-body-box"><pre>{
+    "responseId": "cc50453d-d715-4d5c-b8f9-1144683a358b",
+    "seatMapDetails": { "GF-GF161-GF161-2027070102-2027070104-O": { "rows": [
+        { "rowNumber": 8, "cells": [
+            { "cellCategory": "Seat", "column": "A", "cellDetails": {
+                "cellID": "&lt;opaque base64 token, offer-bound&gt;", "cellCode": "8A", "cellAvailability": "AvailablePaid",
+                "seatPriceDetailsByPassenger": { "PAX1": { "totalPrice": {"amount":120,"currency":"SAR"} } } } }
+        ] }
+        /* ...29 more rows, omitted for length... */
+    ] } }
+}</pre></div>
+<div class="rr-note">30-row seatMapDetails payload truncated for report length; only the AvailablePaid cell (8A) used by the next hop is shown in full. Full response inspected live: 179 AvailablePaid cells across the segment.</div>
+</div>
+</div>
+<div class="hop"><span class="badge PASS">PASS</span> <span class="hop-endpoint">5. Book</span>
+<div class="hd"><b>Request:</b> POST api/v2/FlightBooking/Book - ResponseId/selectedOfferId=GetSeatMap IDs, passengersSelectedSeats.PAX1 cellCode 8A</div>
+<div class="hd"><b>Response:</b> 200 - pnr TPQJOT, seat 8A/120 SAR attached, ticket issued</div>
+<div class="hd"><b>Expected:</b> selectedOffer.priceDetails.totalAmount includes totalSelectedSeatsAmount</div>
+<div class="hd"><b>Actual:</b> 200. totalAmount=1113 SAR = totalBaseAmount 640 + totalTaxAmount 353 + totalAncillariesAmount 0 + totalSelectedSeatsAmount 120 (reconciles exactly); also totalAmount(after)=1113 = totalAmount(before seat, FareConfirm)=993 + totalSelectedSeatsAmount=120 (reconciles exactly)</div>
+<div class="hd"><b>Evidence:</b> pnr TPQJOT, ticketNumber 722136995731</div>
+<div class="hop-reqres-panel">
+<div class="rr-title">Request</div>
+<div class="rr-line">POST to https://ndc-integration-stg-ne-3.azurewebsites.net/api/v2/FlightBooking/Book</div>
+<div class="rr-label">HEADERS</div>
+<div class="rr-box rr-headers-box">
+<div class="rr-h-line">x-api-key: <span class="rr-redacted">&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;(redacted)</span></div>
+<div class="rr-h-line">Client-Id: NDC-Core</div>
+<div class="rr-h-line">Content-Type: application/json</div>
+</div>
+<div class="rr-label">BODY</div>
+<div class="rr-box rr-body-box"><pre>{
+    "ResponseId": "cc50453d-d715-4d5c-b8f9-1144683a358b",
+    "selectedOfferId": "&lt;GetSeatMap offerId, redacted for length&gt;",
+    "supplier": "GulfAir", "credentialsSelector": "KSA",
+    "passengersSelectedSeats": { "PAX1": { "setSegmentsSeats": { "GF-GF161-GF161-2027070102-2027070104-O": {
+        "cellCode": "8A", "cellId": "&lt;verbatim cellID copied from GetSeatMap&gt;" } } } }
+}</pre></div>
+<div class="rr-title" style="margin-top:18px;">Response</div>
+<div class="rr-line">Status code 200</div>
+<div class="rr-label">BODY</div>
+<div class="rr-box rr-body-box"><pre>{
+    "pnr": "TPQJOT", "gdsPNR": "", "bookingToken": "TPC60517146410D2992026",
+    "voidCapability": "FullVoidOnlyAllowed",
+    "tickets": { "PAX1": { "ticketStatus": "Booked", "ticketNumber": "722136995731", "carrierCode": "GF" } },
+    "passengersSelectedSeats": { "PAX1": { "GF-GF161-GF161-2027070102-2027070104-O": { "cellCode": "8A", "price": {"amount":120,"currency":"SAR"} } } },
+    "selectedOffer": { "priceDetails": {
+        "totalAmount": {"amount":1113,"currency":"SAR"}, "totalTaxAmount": {"amount":353,"currency":"SAR"},
+        "totalBaseAmount": {"amount":640,"currency":"SAR"}, "totalAncillariesAmount": {"amount":0,"currency":"SAR"},
+        "totalSelectedSeatsAmount": {"amount":120,"currency":"SAR"} } }
+}</pre></div>
+</div>
+</div>
+</details>
+<!-- DATA: view-tc — closing "View Test Case" block, always the same four sub-fields: Preconditions,
+     Steps (one <li> per step), Expected Result, Actual Result (technical wording, from the source CSV). -->
+<div class="view-tc-wrap"><details class="view-tc"><summary>View Test Case</summary><div class="view-tc-body"><div class="vtc-h">Preconditions</div><div class="vtc-p">TC-BOOK-POS-03's scenario completed and its response captured; the same offer's pre-seat-selection totals from FareConfirm/AddPassenger for comparison.</div><div class="vtc-h">Steps</div><ol class="vtc-steps"><li>Book (with passengersSelectedSeats populated) -&gt; read selectedOffer.priceDetails.{totalAmount, totalBaseAmount, totalTaxAmount, totalAncillariesAmount, totalSelectedSeatsAmount} -&gt; compare totalAmount against totalBaseAmount + totalTaxAmount + totalAncillariesAmount + totalSelectedSeatsAmount, and against the pre-seat-selection totalAmount plus the seat's price.</li></ol><div class="vtc-h">Expected Result</div><div class="vtc-p">totalAmount == totalBaseAmount + totalTaxAmount + totalAncillariesAmount + totalSelectedSeatsAmount, and totalAmount(after) == totalAmount(before seat selection) + totalSelectedSeatsAmount.</div><div class="vtc-h">Actual Result</div><div class="vtc-p">Confirmed exactly on both counts; no billing-integrity defect found.</div></div></details></div>
+</details>
+
+<!-- DATA: test case card — UI shape (scripts/project-type.js detected the case as UI). NO .tc-reqres-panel,
+     NO .tc-reqres-anchor, NO "View req & response" toggle anywhere. The three request-shaped rows read
+     "Feature" / "Steps performed" / "Observed" instead of Endpoint Name / Request / Response (Expected,
+     Actual, Status unchanged). Steps go in details.hops with summary "Steps (N)", one
+     <div class="hop ui-step"> per step: badge + ".hop-endpoint" "<n>. <step>", then three .hd lines
+     Observed / Expected / Evidence (the generic script skips .hop.ui-step). Evidence on a FAIL lists only
+     the annotated screenshots (links inside .ev-body / the step's Evidence .hd); a PASS keeps its "Final
+     UI state (PASS)" shot. Example:
+<details class="tc FAIL">
+<summary class="tc-head"><span><span class="chev"></span><span class="mono">TC-UI-01</span> - Login rejects a wrong password</span><span class="badge FAIL">FAIL</span></summary>
+<div class="row"><b>Feature:</b> Login</div>
+<div class="row"><b>Steps performed:</b> Opened the login page and submitted a wrong password</div>
+<div class="row"><b>Observed:</b> The user was signed in</div>
+<div class="row"><b>Expected:</b> An error message and no sign-in</div>
+<div class="row"><b>Actual:</b> ...</div>
+<div class="row"><b>Status:</b> <span class="badge FAIL">FAIL</span></div>
+<details class="evidence"><summary>Evidence</summary><div class="ev-body">...<div><a href="shots/tc-ui-01-annotated.png">Annotated screenshot</a></div></div></details>
+<details class="hops"><summary>Steps (1)</summary>
+<div class="hop ui-step"><span class="badge FAIL">FAIL</span> <span class="hop-endpoint">1. Submit wrong password</span>
+<div class="hd"><b>Observed:</b> ...</div>
+<div class="hd"><b>Expected:</b> ...</div>
+<div class="hd"><b>Evidence:</b> ...</div>
+</div>
+</details>
+<div class="view-tc-wrap">...View Test Case, same as an API card...</div>
+</details>
+-->
+
+<!-- DATA: test case card — SINGLE-REQUEST shape (payload shown at card level, no `hops` array or only
+     one request of interest). Status row is <div class="row tc-status-row"> with an empty
+     <span class="tc-reqres-anchor"></span>; the .tc-reqres-panel sits as a direct child of the card,
+     after Evidence and before View Test Case. BLOCKED cases that never sent a request get NO panel and
+     NO anchor. -->
+<details class="tc FAIL">
+<summary class="tc-head"><span><span class="chev"></span><span class="mono">TC-BOOK-BIZ-05</span> - Validate a Child (CHD) passenger assigned an Exit Row seat is rejected server-side</span><span class="badge FAIL">FAIL</span></summary>
+<div class="row"><b>Endpoint Name:</b> Confirm the system refuses to seat a child passenger in an emergency exit row</div>
+<div class="row"><b>Request:</b> Attempted to book a flight for one adult and one child (age 10), assigning the child to an exit-row seat</div>
+<div class="row"><b>Response:</b> The booking was accepted and completed &mdash; the child was seated in the exit row with no objection raised</div>
+<div class="row"><b>Expected:</b> This booking should have been refused, since a child cannot fulfil an exit row's emergency-assistance duties</div>
+<div class="row"><b>Actual:</b> <b>BUG-09, 7th confirmed occurrence (not new)</b> &mdash; a real, ticketed reservation was created with the child seated in the exit row, and the system's own records show it knew the passenger's age. First observed Round 1 (2026-08-25); reproducing in this exact form since Round 2</div>
+<div class="row tc-status-row"><b>Status:</b> <span class="badge FAIL">FAIL</span><span class="tc-reqres-anchor"></span></div>
+<details class="evidence"><summary>Evidence</summary><div class="ev-body">pnr QVUTYI; passengersList.PAX2={passengerTypeCode:CHD, age:10}; passengersSelectedSeats.PAX2.cellCode=18C (cellCharacteristics include EXIT_ROW_SEAT); ticket 722136995695 issued for PAX2.</div></details>
+<!-- DATA: tc-reqres-panel — same inner markup as a hop panel. For a test case that sends several
+     requests of interest (e.g. an isdebug=true/false/omitted sweep), precede each Request/Response pair
+     with an attempt label:
+<div class="rr-attempt-label">Attempt 1 of 3 &mdash; isdebug: true</div>
+-->
+<div class="tc-reqres-panel">
+<div class="rr-title">Request</div>
+<div class="rr-line">POST to https://ndc-integration-stg-ne-3.azurewebsites.net/api/v2/FlightBooking/Book</div>
+<div class="rr-label">HEADERS</div>
+<div class="rr-box rr-headers-box">
+<div class="rr-h-line">x-api-key: <span class="rr-redacted">&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;(redacted)</span></div>
+<div class="rr-h-line">Client-Id: NDC-Core</div>
+<div class="rr-h-line">Content-Type: application/json</div>
+</div>
+<div class="rr-label">BODY</div>
+<div class="rr-box rr-body-box"><pre>{
+    "ResponseId": "d1fc3a00-e4ac-4d31-8e15-097dc39a1e7f",
+    "selectedOfferId": "&lt;GetSeatMap offerId, redacted for length&gt;",
+    "supplier": "GulfAir", "credentialsSelector": "KSA",
+    "passengersSelectedSeats": { "PAX2": { "setSegmentsSeats": { "GF-GF161-GF161-2027070802-2027070804-O": {
+        "cellCode": "18C", "cellId": "&lt;verbatim cellID copied from GetSeatMap&gt;" } } } }
+}</pre></div>
+<div class="rr-title" style="margin-top:18px;">Response</div>
+<div class="rr-line">Status code 200 (no rejection of any kind)</div>
+<div class="rr-label">BODY</div>
+<div class="rr-box rr-body-box"><pre>{
+    "pnr": "QVUTYI", "gdsPNR": "",
+    "tickets": {
+        "PAX1": { "ticketStatus": "Booked", "ticketNumber": "722136995694", "carrierCode": "GF" },
+        "PAX2": { "ticketStatus": "Booked", "ticketNumber": "722136995695", "carrierCode": "GF" }
+    },
+    "passengersSelectedSeats": { "PAX2": { "GF-GF161-GF161-2027070802-2027070804-O": { "cellCode": "18C", "price": {"amount":60,"currency":"SAR"} } } },
+    "passengersList": { "PAX2": { "name": {"first":"LAILA","last":"IBRAHIM"}, "passengerTypeCode": "CHD", "age": 10 } }
+}</pre></div>
+<div class="rr-note">Seat 18C's cellCharacteristics (from the preceding GetSeatMap call): CHARGEABLE_SEAT, FRONT_OF_CABIN, AISLE_SEAT, EXIT_ROW_SEAT, LEFT_SIDE_OF_AIRCRAFT, OVER_WING_SEAT_S. seatMapDetails also showed this cell as AvailablePaid for both PAX1 (ADT) and PAX2 (CHD) &mdash; no client-side flag distinguishes CHD eligibility either.</div>
+</div>
+<div class="view-tc-wrap"><details class="view-tc"><summary>View Test Case</summary><div class="view-tc-body"><div class="vtc-h">Preconditions</div><div class="vtc-p">AddPassenger completed with at least one CHD passenger; GetSeatMap completed and an exit-row cell (cellCharacteristics containing an Exit-seat characteristic) identified for that passenger's segment.</div><div class="vtc-h">Steps</div><ol class="vtc-steps"><li>AddPassenger (CHD present) -&gt; GetSeatMap (identify an exit-row cellCode/cellId via cellCharacteristics) -&gt; Book (assign that cellCode/cellId to the CHD passenger's setSegmentsSeats entry, bypassing any client-side UI restriction).</li></ol><div class="vtc-h">Expected Result</div><div class="vtc-p">Response status is an error (candidate error code RESTRICTED_EXIT_ROW_SEAT_FOR_CHILD, per this suite's Seat map - Seatmap.md TC-INT-BOOK-008 reference) and no pnr is created for this attempt.</div><div class="vtc-h">Actual Result</div><div class="vtc-p">BUG-09 CONFIRMED (7th occurrence, not new &mdash; first observed Round 1, 2026-08-25) &mdash; accepted with no error at all; real booking and real ticket created for the CHD passenger in the exit-row seat.</div></div></details></div>
+</details>
+</div>
+</details>
+
+</details>
+
+<!-- DATA: Findings — header badges: Defects (scb-val serious) = count of kind "defect",
+     Unknown-resolution (scb-val accent) = count of kind "unknown_resolution". One .finding block per
+     finding line: .kind label, one-line summary + (.mono spec refs + TC-ID), then Field / Expected value /
+     [History] / Impact rows. A recurrence of an existing bug labels itself in .kind as
+     "Defect &mdash; BUG-NN, Nth confirmed occurrence (not new)"; a brand-new defect is just "Defect".
+     Impact ends with a relative link to the bug report when one was generated:
+     ../BugReports/<slug>/<BUG-ID>_<...>.md
+     unknown_resolution example (accent styling):
+<div class="finding unknown_resolution"><div class="kind">Unknown-resolution</div>
+FareConfirm error shape for expired offerId confirmed as <code>{errorCode:'OFFER_EXPIRED'}</code> <span class="mono">(§2.3, TC-0412)</span>
+</div>
+     Nothing logged at all: keep the header with 0/0 badges and use
+<p class="empty">No findings logged for this run.</p>
+-->
+<details class="section-collapse" open>
+<summary class="section-summary-flex">Findings<span class="section-count-badges"><span class="section-count-badge"><span class="scb-val serious">1</span><span class="scb-lbl">Defects</span></span><span class="section-count-badge"><span class="scb-val accent">0</span><span class="scb-lbl">Unknown-resolution</span></span></span></summary>
+<div class="finding defect"><div class="kind">Defect &mdash; BUG-09, 7th confirmed occurrence (not new)</div>
+Book does not enforce the Exit Row seat restriction for Child (CHD) passengers <span class="mono">(SPEC.md §2.7, §2.9, TC-BOOK-BIZ-05)</span>
+<div><b>Field:</b> <code>passengersSelectedSeats.&lt;CHD paxRef&gt;.setSegmentsSeats.&lt;seg&gt;.cellCode</code> (Book request)</div>
+<div><b>Expected value:</b> <code>HTTP error (candidate RESTRICTED_EXIT_ROW_SEAT_FOR_CHILD)</code>, no pnr created</div>
+<!-- DATA: [OPTIONAL] History — only when the finding carries `history` (recurrence of a tracked bug). -->
+<div><b>History:</b> first observed Round 1 (2026-08-25, milder silent-drop form); reproducing in this worse zero-validation form (seat genuinely attached and ticketed) since Round 2 (2026-08-26). This run is the 7th confirmed occurrence (Rounds 1, 2, 3, 5, 6, 9 &mdash; Round 4 blocked by the concurrent GetSeatMap outage BUG-14), with a 23-day gap since the last confirmation (Round 6, 2026-09-06).</div>
+<div><b>Impact:</b> A real-world aviation safety rule remains silently unenforced after 35 days and 7 confirmations. A 10-year-old passenger (age computed and returned by the server itself) was successfully booked and ticketed into an exit-row seat with zero rejection. Worth escalating to confirm this is actually on a remediation backlog, not just repeatedly re-logged. See <a href="../BugReports/20260929-090138_SeatMap-GulfAir-KSA-Round9/BUG-09_Book_passengersSelectedSeats_ExitRowCHD.md">full bug report</a>.</div>
+</div>
+<!-- DATA: [OPTIONAL] one closing note per finding of kind "reconfirmed" (a known bug seen again inside
+     a hop, not the test case's own verdict) — not counted in the header badges. Omit when none. -->
+<p class="empty" style="margin-top:10px;">Also re-confirmed this round (already tracked since Round 2): BUG-10 (AddPassenger rejects its own saved Postman example over a name.middle mismatch), 9th consecutive round. See TC-BOOK-BIZ-04's Hop 3 above.</p>
+</details>
+
+<!-- DATA: [OPTIONAL] Not reproduced — render ONLY when the .jsonl has `not_reproduced` lines (a
+     previously tracked bug this run exercised but did not see). One <p> per line: <b>BUG-ID</b> (short
+     name) &mdash; what was exercised and what happened, plus the recommendation. Omit the whole
+     section when there are none. -->
+<details class="section-collapse" open>
+<summary>Not reproduced</summary>
+<p style="font-size:13px; color:var(--ink-2); margin:0;"><b>BUG-16</b> (Book/Hold HTTP 500 while silently succeeding) &mdash; did NOT reproduce this round. Both Book calls (TC-BOOK-BIZ-04, TC-BOOK-BIZ-05) returned a clean HTTP 200 on the first attempt, each with a real PNR and no error envelope. This is the first Book activity for GulfAir/KSA since BUG-16 was discovered (Round 8), and BUG-09 reproduced identically regardless &mdash; confirming the two defects are independent, not two symptoms of one root cause. Two clean calls is not proof BUG-16 is fully resolved &mdash; recommend a wider re-verification pass before closing it out.</p>
+</details>
+
+<!-- DATA: Proposed SPEC.md updates — header badge = number of distinct (section, old_text) proposals.
+     Per proposal (latest line per pair wins for status): <p><b>§X.Y</b> &mdash; status: <i>pending|applied|declined</i></p>,
+     <p><b>Old:</b> "..."</p>, <p><b>New:</b> "..."</p>, plus <p><b>Correction:</b> ...</p> only when the line
+     has a `note`. None: badge 0 and <p class="empty">No SPEC.md updates proposed this run.</p> -->
+<details class="section-collapse" open>
+<summary class="section-summary-flex">Proposed SPEC.md updates<span class="section-count-badge"><span class="scb-val">1</span><span class="scb-lbl">Proposed Updates</span></span></summary>
+<div style="font-size:13px; color:var(--ink-2);">
+<p><b>§2.9</b> &mdash; status: <i>pending</i></p>
+<p><b>Old:</b> "Added 2026-08-10, UNKNOWN, needs live confirmation: when a seat is selected, does selectedOffer.priceDetails.totalAmount include totalSelectedSeatsAmount in its sum...? None of the existing V1/V2 price-reconciliation test scripts were observed summing a seat amount into their assertions - this is a strong candidate coverage gap..."</p>
+<p><b>New:</b> "Confirmed live, GulfAir/KSA: yes, selectedOffer.priceDetails.totalAmount includes totalSelectedSeatsAmount - verified totalAmount == totalBaseAmount + totalTaxAmount + totalAncillariesAmount + totalSelectedSeatsAmount and totalAmount(after seat) == totalAmount(before seat, FareConfirm) + totalSelectedSeatsAmount, both exactly. No billing-integrity defect found."</p>
+<p><b>Correction:</b> originally confirmed 2026-08-25 in Round 1 (TC-BOOK-BIZ-04, pnr RWNRYI, 703=230+353+0+120) and independently re-confirmed in Rounds 2, 3, 5, 6, and now 9 (6 total confirmations, 1113=640+353+0+120 this round) &mdash; this update has been pending since Round 1 and was never applied, despite five prior confirmations before this run.</p>
+</div>
+</details>
+
+<!-- DATA: Cleanup / follow-up — warning callout, count in the lead line "Live artifacts left behind
+     this run (N):", one <li> per cleanup line: <kind> &mdash; PNR <mono> (<mono TC-ID>) &mdash; note.
+     None: replace the callout with <p class="empty">Nothing left needing cleanup.</p> -->
+<details class="section-collapse" open>
+<summary>Cleanup / follow-up</summary>
+<div class="cleanup"><b>Live artifacts left behind this run (2):</b><ul>
+<li>needs_void_cancel &mdash; PNR <span class="mono">TPQJOT</span> (<span class="mono">TC-BOOK-BIZ-04</span>) &mdash; real Book succeeded, ticket 722136995731 issued (BAH-RUH 2027-07-01, seat 8A). voidCapability=FullVoidOnlyAllowed.</li>
+<li>needs_void_cancel &mdash; PNR <span class="mono">QVUTYI</span> (<span class="mono">TC-BOOK-BIZ-05</span>) &mdash; real Book succeeded, tickets issued for both passengers (722136995694, 722136995695), including the CHD in the exit-row seat. This booking is this run's evidence for BUG-09 (7th confirmed occurrence) &mdash; <b>do not void until the defect is triaged/confirmed</b> by the platform team.</li>
+</ul></div>
+</details>
+
+</div>
+<!-- GENERIC SCRIPT — copy verbatim; never edit per run. It wires filters, expand/collapse, and
+     every "View req & response" toggle purely from the IDs/classes above. -->
+<script>
+(function(){
+  var cards = Array.prototype.slice.call(document.querySelectorAll('details.tc'));
+  var sections = Array.prototype.slice.call(document.querySelectorAll('details.section-collapse'));
+  var categories = Array.prototype.slice.call(document.querySelectorAll('details.tc-category'));
+  var search = document.getElementById('tcSearch');
+  var statusSel = document.getElementById('tcStatusFilter');
+  var categorySel = document.getElementById('tcCategoryFilter');
+  var countEl = document.getElementById('tcCount');
+  var noResultsEl = document.getElementById('tcNoResults');
+  var resetBtn = document.getElementById('tcResetFilters');
+  var expandBtn = document.getElementById('tcExpandAll');
+  var collapseBtn = document.getElementById('tcCollapseAll');
+
+  function applyFilter(){
+    var q = search.value.trim().toLowerCase();
+    var status = statusSel.value;
+    var category = categorySel.value;
+    var visible = 0;
+    cards.forEach(function(card){
+      var matchesStatus = !status || card.classList.contains(status);
+      var matchesText = !q || card.textContent.toLowerCase().indexOf(q) !== -1;
+      var matchesCategory = !category || card.closest('details.tc-category').getAttribute('data-cat') === category;
+      var show = matchesStatus && matchesText && matchesCategory;
+      card.classList.toggle('js-hidden', !show);
+      if (show) visible++;
+      if (show && q) card.open = true;
+    });
+    categories.forEach(function(cat){
+      var anyVisible = cat.querySelector('details.tc:not(.js-hidden)');
+      var matchesCategory = !category || cat.getAttribute('data-cat') === category;
+      cat.classList.toggle('cat-empty', !anyVisible || !matchesCategory);
+      if (anyVisible && matchesCategory && (q || status || category)) cat.open = true;
+    });
+    countEl.textContent = visible + ' / ' + cards.length + ' shown';
+    noResultsEl.classList.toggle('js-hidden', visible !== 0);
+  }
+
+  search.addEventListener('input', applyFilter);
+  statusSel.addEventListener('change', applyFilter);
+  categorySel.addEventListener('change', applyFilter);
+  resetBtn.addEventListener('click', function(e){
+    e.preventDefault(); e.stopPropagation();
+    search.value = '';
+    statusSel.value = '';
+    categorySel.value = '';
+    applyFilter();
+  });
+  expandBtn.addEventListener('click', function(e){
+    e.preventDefault(); e.stopPropagation();
+    cards.forEach(function(c){ c.open = true; });
+    sections.forEach(function(s){ s.open = true; });
+    categories.forEach(function(c){ c.open = true; });
+    Array.prototype.forEach.call(document.querySelectorAll('details.tc details'), function(d){ d.open = true; });
+  });
+  collapseBtn.addEventListener('click', function(e){
+    e.preventDefault(); e.stopPropagation();
+    cards.forEach(function(c){ c.open = false; });
+    sections.forEach(function(s){ s.open = false; });
+    categories.forEach(function(c){ c.open = false; });
+    Array.prototype.forEach.call(document.querySelectorAll('details.tc details'), function(d){ d.open = false; });
+  });
+
+  categories.forEach(function(cat){
+    var catCards = Array.prototype.slice.call(cat.querySelectorAll('details.tc'));
+    var catExpandBtn = cat.querySelector('.tc-cat-expand');
+    var catCollapseBtn = cat.querySelector('.tc-cat-collapse');
+    catExpandBtn.addEventListener('click', function(e){
+      e.preventDefault(); e.stopPropagation();
+      catCards.forEach(function(c){ c.open = true; });
+    });
+    catCollapseBtn.addEventListener('click', function(e){
+      e.preventDefault(); e.stopPropagation();
+      catCards.forEach(function(c){ c.open = false; });
+    });
+  });
+
+  applyFilter();
+
+  Array.prototype.slice.call(document.querySelectorAll('.hop')).forEach(function(hop){
+    if (hop.classList.contains('ui-step')) return;
+    var panel = hop.querySelector('.hop-reqres-panel');
+    var endpointSpan = hop.querySelector('.hop-endpoint');
+    var toggle = document.createElement('a');
+    toggle.href = '#';
+    toggle.className = 'hop-reqres-toggle';
+    toggle.textContent = 'View req & response';
+
+    if (panel) {
+      panel.classList.add('js-hidden');
+      toggle.addEventListener('click', function(e){
+        e.preventDefault(); e.stopPropagation();
+        var hidden = panel.classList.toggle('js-hidden');
+        toggle.textContent = hidden ? 'View req & response' : 'Hide req & response';
+      });
+      endpointSpan.parentNode.insertBefore(toggle, endpointSpan.nextSibling);
+      return;
+    }
+
+    var hds = Array.prototype.slice.call(hop.querySelectorAll('.hd'));
+    var reqEl = hds[0];
+    var resEl = hds[1];
+    if (!reqEl || !resEl) return;
+    reqEl.classList.add('hop-reqres', 'js-hidden');
+    resEl.classList.add('hop-reqres', 'js-hidden');
+    toggle.addEventListener('click', function(e){
+      e.preventDefault(); e.stopPropagation();
+      var hidden = reqEl.classList.toggle('js-hidden');
+      resEl.classList.toggle('js-hidden', hidden);
+      toggle.textContent = hidden ? 'View req & response' : 'Hide req & response';
+    });
+    endpointSpan.parentNode.insertBefore(toggle, endpointSpan.nextSibling);
+  });
+
+  Array.prototype.slice.call(document.querySelectorAll('.tc-reqres-anchor')).forEach(function(anchor){
+    var card = anchor.closest('details.tc');
+    var panel = card ? card.querySelector(':scope > .tc-reqres-panel') : null;
+    if (!panel) return;
+    panel.classList.add('js-hidden');
+    var toggle = document.createElement('a');
+    toggle.href = '#';
+    toggle.className = 'hop-reqres-toggle tc-reqres-toggle';
+    toggle.textContent = 'View req & response';
+    toggle.addEventListener('click', function(e){
+      e.preventDefault(); e.stopPropagation();
+      var hidden = panel.classList.toggle('js-hidden');
+      toggle.textContent = hidden ? 'View req & response' : 'Hide req & response';
+    });
+    anchor.parentNode.insertBefore(toggle, anchor.nextSibling);
+  });
+})();
+</script>
+</body></html>
